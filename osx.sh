@@ -1,4 +1,4 @@
-# Dokc stuff
+# Dock stuff
 # Automatically hide and show the Dock
 defaults write com.apple.dock autohide -bool true
 # Remove the auto-hiding Dock delay
