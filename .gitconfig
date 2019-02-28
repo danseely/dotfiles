@@ -1,0 +1,19 @@
+[credential]
+	helper = osxkeychain
+[alias]
+	lg = log --graph --pretty=format:'%Cred%h%Creset %C(cyan)%an%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset' --abbrev-commit --date=relative
+        hist = log --pretty=format:\"%h %ad | %s%d [%an]\" --graph --date=short
+	co = checkout
+	st = status
+	sub = submodule update
+	recent = ! git reflog | grep 'checkout: moving from' | head -n 50 | egrep -oh ' \\S+$' | awk '!x[$0]++'
+
+[filter "lfs"]
+	clean = git-lfs clean %f
+	smudge = git-lfs smudge %f
+	required = true
+[user]
+	name = Dan Seely
+	email = dan@danseely.net
+[core]
+	editor = vim
