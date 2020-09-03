@@ -74,6 +74,10 @@ alias fixslack='python ~/dev/fixslack.py'
 # launching slack
 alias slackn="slack-term -config ~/slack-term-nutshell.json"
 
+# AWS cli auth script
+# Usage: `awsauth <mfa token code>
+alias awsauth="~/aws-auth.sh default "
+
 # git stuff
 alias pairas="git config user.pair 'AS+DS' && git config user.name 'Andrew Sardone and Dan Seely' && git config user.email 'developers+dseely+asardone@nutshell.com'; pair"
 alias paircb="git config user.pair 'DS+CB' && git config user.name 'Dan Seely and Chris Berger' && git config user.email 'developers+dseely+cberger@nutshell.com'; pair"
@@ -89,3 +93,8 @@ alias nv="nvim"
 alias vimrc="vim ~/.vim/vimrc"
 export PATH="/usr/local/sbin:$PATH"
 eval "$(pyenv init -)"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# Adadapted aliases
+alias sandboxssh="ssh ubuntu@34.229.169.195 -i ~/.ssh/aasand.pem"
+alias prodssh="ssh ubuntu@3.88.91.142 -i ~/.ssh/aaprod.pem"
