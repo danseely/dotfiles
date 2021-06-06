@@ -8,6 +8,7 @@
 	sub = submodule update
 	recent = ! git reflog | grep 'checkout: moving from' | head -n 50 | egrep -oh ' \\S+$' | awk '!x[$0]++'
 	pushf = push --force-with-lease
+	mr = !sh -c 'git fetch $1 merge-requests/$2/head:mr-$1-$2 && git checkout mr-$1-$2' -
 
 [filter "lfs"]
 	clean = git-lfs clean %f
@@ -18,3 +19,14 @@
 	email = dan@danseely.net
 [core]
 	editor = vim
+[pull]
+	ff = only
+[gpg]
+	program = /usr/local/bin/gpg
+[commit]
+	gpgsign = true
+
+; use AdAdapted user email for AdAdapted repos
+; include for all repositories inside $HOME/dev/adadapted
+[includeIf "gitdir:~/dev/adadapted/"]
+	path = ~/dev/adadapted/.gitconfig
