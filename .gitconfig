@@ -21,10 +21,6 @@
 	editor = vim
 [pull]
 	ff = only
-[gpg]
-	program = /usr/local/bin/gpg
-[commit]
-	gpgsign = true
 
 ; use AdAdapted user email for AdAdapted repos
 ; include for all repositories inside $HOME/dev/adadapted
