@@ -1,14 +1,22 @@
 #!/bin/sh
 
+# TODO make symlinks
+# TODO handle on-my-zsh config properly
+#
+
+# Install Homebrew
 echo "Installing Homebrew"
 if test ! $(which brew); then
   /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+  echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> /Users/dan/.zprofile
+  eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 brew update
 echo "Install Homebrew Packages"
 brew tap homebrew/bundle
 brew bundle
 
+# Apple dev tools
 echo "Install XCode CLI Tool"
 xcode-select --install
 

@@ -44,6 +44,9 @@ cask 'gpg-suite'
 cask 'postman'
 cask 'sequel-pro'
 
+# Install svn first for font installation support
+brew svn
+
 # Fonts
 cask 'font-source-code-pro-for-powerline'
 cask 'font-source-code-pro'
