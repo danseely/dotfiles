@@ -1,7 +1,10 @@
 # Taps
+tap 'homebrew/bundle'
+tap 'homebrew/cask'
+tap 'homebrew/core'
 tap 'homebrew/cask-fonts'
 tap 'homebrew/cask-versions'
-tap 'heroku/brew' 
+tap 'heroku/brew'
 
 # Install CLI Tools
 ## Shell Utilities
@@ -22,6 +25,7 @@ brew 'nvm'
 brew 'node'
 brew 'vim'
 brew 'pyenv'
+brew 'yarn'
 
 # Mac Apps
 cask '1password'
@@ -32,17 +36,21 @@ cask 'slack'
 cask 'docker'
 cask 'rectangle'
 cask 'karabiner-elements'
+# cask 'hammerspoon'
 cask 'pastebot'
 cask 'brave-browser'
 cask 'google-chrome'
 cask 'nvalt'
 cask 'spotify'
+cask 'spotmenu'
 cask 'tableplus'
 cask 'via'
 cask 'appcleaner'
 cask 'gpg-suite'
 cask 'postman'
 cask 'sequel-pro'
+cask 'discord'
+cask 'authy'
 
 # Install svn first for font installation support
 brew svn
