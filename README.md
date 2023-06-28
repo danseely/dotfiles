@@ -31,19 +31,9 @@ $ sh ./osx.sh
 
 ## High-level todos
 
-- [ ] add `vimrc`
-- [ ] add `bash_profile`
+- [x] add `vimrc`
 - [ ] add `tmuxrc`
-- [ ] replace `vimrc`, `bash_profile`, `tmuxrc` on Mac with symlinks
-- [ ] https://github.com/jasonrudolph/keyboard (Hammerspoon + Karabiner)
-
-## Automate intsalls
-
-- [ ] vagrant
-- [ ] virtualbox
-- [ ] PHPStorm
-- [ ] MAS apps
-
-## Changes
-
-- [ ] get PHPSTorm config into dotfiles, out of built-in sync
+- [ ] figure out correct portable config for oh-my-zsh
+- [ ] figure out correct portable config for fzf
+- [ ] figure out correct portable config for iterm
+- [ ] figure out correct portable config for atext
