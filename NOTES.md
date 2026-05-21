@@ -3,6 +3,22 @@
 > Temporary file. Tracks the cleanup/alignment of this repo across two Macs.
 > **Delete before the project is considered done.** This is not part of the dotfiles.
 
+> **Fresh-session quickstart.** If you're a Claude session picking this up
+> cold:
+> 1. `cd <repo>; git fetch; git worktree list` — confirm where you are and
+>    whether the other Mac's worktree exists. If editing `align/cleanup`,
+>    use a worktree (e.g. `~/dev/dotfiles-align`) so live symlinked config
+>    in the main checkout isn't clobbered.
+> 2. Identify this host (`scutil --get LocalHostName`) and find its
+>    §Hosts entry below. ⚠️ markers there name current blockers.
+> 3. Check the `BATON:` line under §Cross-machine protocol — only edit
+>    `align/cleanup` if it says `idle`. Take BATON in the same commit that
+>    does the work, release back to `idle` at the end.
+> 4. §Decisions log = settled (don't relitigate). §Pass plan & status =
+>    the work queue. §Open questions = what's actively unresolved.
+> 5. Primary guardrail: **LOSE NO DATA**. Preserve everything; throw away
+>    only after both Macs have verified.
+
 ## Goal / end-state
 
 **#1 — identical configs on both Macs.** Maximize what is shared and
