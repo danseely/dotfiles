@@ -51,6 +51,7 @@ cask 'postman'
 cask 'sequel-pro'
 cask 'discord'
 cask 'authy'
+cask 'keyboard-cleaner'
 
 # Install svn first for font installation support
 brew svn
@@ -62,4 +63,4 @@ cask 'font-source-sans-pro'
 cask 'font-jetbrains-mono'
 
 # App
-mas 'XCode', id: 497799835
+# mas 'XCode', id: 497799835

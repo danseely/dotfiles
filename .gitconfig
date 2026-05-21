@@ -21,7 +21,7 @@
 	signingkey = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPqOHWqaDcvrbxJZBsMlHl+pZq+u9SD+HvqCQGJW3s7Y
 [core]
 	editor = vim
-	excludesfile = /Users/dan/.gitignore_global
+	excludesfile = {$HOME}/.gitignore_global
 [pull]
 	ff = only
 
@@ -31,16 +31,22 @@
 	path = ~/dev/adadapted/.gitconfig
 [difftool "sourcetree"]
 	cmd = opendiff \"$LOCAL\" \"$REMOTE\"
-	path = 
+	path =
 [mergetool "sourcetree"]
 	cmd = /Applications/Sourcetree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
 	trustExitCode = true
 [commit]
-	template = /Users/dan/.stCommitMsg
+	template = {$HOME}/.stCommitMsg
 	gpgsign = true
 [init]
 	defaultBranch = main
 [gpg]
-	format = ssh
+    format = ssh
 [gpg "ssh"]
 	program = /Applications/1Password.app/Contents/MacOS/op-ssh-sign
+[credential "https://github.com"]
+	helper = 
+	helper = !/opt/homebrew/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !/opt/homebrew/bin/gh auth git-credential

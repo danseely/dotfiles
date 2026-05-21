@@ -1,3 +1,16 @@
+# vvv BEGIN VS Code / Cursor agent fix vvv
+# https://forum.cursor.com/t/guide-fix-cursor-agent-terminal-hangs-caused-by-zshrc/107261
+if [[ "$PAGER" == "head -n 10000 | cat" || "$COMPOSER_NO_INTERACTION" == "1" ]]; then
+  return
+fi
+
+# Hopefully this one isn't needed, breaks in-IDE terminal
+# if [[ "$TERM_PROGRAM" == "vscode" || "$TERM_PROGRAM" == "cursor" ]]; then
+#   return
+# fi
+
+# ^^^ END VS Code / Cursor agent fix ^^^
+
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
@@ -9,16 +22,22 @@ fi
 export PATH=$HOME/bin:/usr/local/bin:$PATH
 export PATH="/usr/local/sbin:$PATH"
 # Path to your oh-my-zsh installation.
-export ZSH="/Users/dan/.oh-my-zsh"
+export ZSH="$HOME/.oh-my-zsh"
 
 # pyenv
 # export PATH="$HOME/.pyenv/bin:$PATH"
 # export PATH="/usr/local/bin:$PATH"
 export PYENV_ROOT="$HOME/.pyenv"
-command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+# command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init --path)"
+# eval "$(pyenv init)"
+eval "$(pyenv init -)"
 
 # poetry
 export PATH="$HOME/.local/bin:$PATH"
+# or this?
+# export PATH=$PATH:$HOME/.local/bin
 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
@@ -87,7 +106,9 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git docker docker-compose zsh-nvm z)
+# zstyle ':omz:plugins:zsh-nvm' lazy yes
+# zstyle ':omz:plugins:nvm' lazy yes
+plugins=(git docker docker-compose z)
 
 # disable something about insecure something, idk (Dan)
 ZSH_DISABLE_COMPFIX="true"
@@ -155,18 +176,82 @@ export GPG_TTY=$TTY
 # random
 alias weather="curl http://wttr.in"
 
-# The next line updates PATH for the Google Cloud SDK.
-if [ -f '/Users/dan/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/dan/google-cloud-sdk/path.zsh.inc'; fi
-
-# The next line enables shell command completion for gcloud.
-if [ -f '/Users/dan/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/dan/google-cloud-sdk/completion.zsh.inc'; fi
-
 # DEGBUGGING: let compilers find Homebrew's zlib
 # export PKG_CONFIG_PATH="/usr/local/opt/zlib/lib/pkgconfig"
 #
-eval "$(pyenv init --path)"
-# eval "$(pyenv init)"
+
 export LDFLAGS="-L/usr/local/opt/zlib/lib -L/usr/local/opt/bzip2/lib"
 export CPPFLAGS="-I/usr/local/opt/zlib/include -I/usr/local/opt/bzip2/include"
 export PATH="/usr/local/opt/php@7.4/bin:$PATH"
 export PATH="/usr/local/opt/php@7.4/sbin:$PATH"
+
+# eval "$(rbenv init - zsh)"
+
+# The next line updates PATH for the Google Cloud SDK.
+if [ -f '/Users/dseely/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/dseely/google-cloud-sdk/path.zsh.inc'; fi
+
+# The next line enables shell command completion for gcloud.
+if [ -f '/Users/dseely/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/dseely/google-cloud-sdk/completion.zsh.inc'; fi
+
+test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
+
+
+# Added by Antigravity
+export PATH="/Users/dseely/.antigravity/antigravity/bin:$PATH"
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# Per-pane iTerm2 theme switcher. Emits OSC 1337 SetProfile=<name> to switch
+# the current session to a dynamic-profile clone of Default with only the bg
+# overridden. `theme off` switches back to Default — a true reset that
+# restores every profile attribute (transparency, dimming, all of it) because
+# iTerm re-applies the full profile on switch.
+#
+# Profile definitions live in:
+#   ~/Library/Application Support/iTerm2/DynamicProfiles/theme-profiles.json
+theme() {
+  local profile
+  case "$1" in
+    lavender|sage|slate|amber|crimson) profile="theme-$1" ;;
+    off|reset)                          profile="Default" ;;
+    ""|-h|--help|help|list|ls)
+      cat <<EOF
+usage: theme <name>
+
+themes: lavender  sage  slate  amber  crimson
+reset:  off  (alias: reset)
+EOF
+      return 0 ;;
+    *) echo "theme: unknown '$1' — run 'theme' for the list" >&2; return 1 ;;
+  esac
+  # Fast path: TTY available — emit OSC directly. RestoreDefaultColors
+  # clears any lingering session-level SetColors overrides (e.g. from a
+  # prior `theme` version or anything else that scribbled on this session)
+  # so the profile switch lands cleanly.
+  if [[ -t 1 ]]; then
+    printf '\033]1337;RestoreDefaultColors\007\033]1337;SetProfile=%s\007' "$profile"
+    return 0
+  fi
+  # Fallback: no TTY (Claude Code's `!`-prefix captures stdout). Inject via
+  # the iterm2 Python API, addressing this session by $ITERM_SESSION_ID.
+  if [[ -z "$ITERM_SESSION_ID" ]]; then
+    echo "theme: no TTY and ITERM_SESSION_ID unset — can't switch" >&2
+    return 1
+  fi
+  /usr/bin/python3 - "$profile" <<'PYEOF' 2>/dev/null
+import os, sys, iterm2
+uuid = os.environ["ITERM_SESSION_ID"].split(":")[-1]
+profile = sys.argv[1]
+async def main(conn):
+    app = await iterm2.async_get_app(conn)
+    sess = app.get_session_by_id(uuid)
+    if sess is None:
+        print(f"theme: iterm session {uuid} not found", file=sys.stderr)
+        sys.exit(1)
+    await sess.async_inject(b"\x1b]1337;RestoreDefaultColors\x07")
+    await sess.async_inject(f"\x1b]1337;SetProfile={profile}\x07".encode())
+iterm2.run_until_complete(main, retry=False)
+PYEOF
+}
