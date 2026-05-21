@@ -163,6 +163,20 @@ Flow:
         (tracked, identical across Macs; symlinked into
         `~/Library/Application Support/iTerm2/DynamicProfiles/`),
         THEN does its own un-track step.
+        - DONE on macbook-pro 2026-05-21: exported the 5 `theme-*`
+          profiles (lavender/sage/slate/amber/crimson) verbatim from
+          live `~/Library/Application Support/iTerm2/DynamicProfiles/
+          theme-profiles.json` (98 lines, 3.2K, all Dynamic-Profile-
+          Parent-Name=Default with only background-color overrides).
+          File added at `iterm/DynamicProfiles/dan.json`.
+        - DEFERRED (Phase 2): replacing the live
+          `~/Library/Application Support/iTerm2/DynamicProfiles/
+          theme-profiles.json` with a symlink to the repo. Reason:
+          macbook-pro's main checkout is currently on
+          `snapshot/macbook-pro` (worktree on `align/cleanup`).
+          Symlinking now would have to target the worktree, which
+          gets removed at project end. Do this when main checkout
+          lands on `master` post-merge.
       - ⚠️ ORDERING HAZARD: do NOT un-track/de-symlink `.iterm` on the
         OTHER Mac until its important profiles are exported to the repo
         first. `snapshot/<otherhost>` also preserves its raw plist.
