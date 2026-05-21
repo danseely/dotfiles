@@ -3,19 +3,21 @@
 > Temporary file. Tracks the cleanup/alignment of this repo across two Macs.
 > **Delete before the project is considered done.** This is not part of the dotfiles.
 
-## Goal / end-state (CONFIRM)
+## Goal / end-state
 
-Working assumption (Dan to confirm): **#1 — identical configs on both Macs**
-is the goal. Maximize what is shared and byte-identical. Use the
-**per-host `*.local` override mechanism (#2)** ONLY for irreducible
-differences that genuinely cannot be unified (e.g. Intel vs Apple-Silicon
-paths, work-only tools). Do NOT create `.local` files speculatively.
+**#1 — identical configs on both Macs.** Maximize what is shared and
+byte-identical. Use the **per-host `*.local` override mechanism (#2)** ONLY
+for irreducible differences that genuinely cannot be unified (e.g. Intel vs
+Apple-Silicon paths, work-only tools). Do NOT create `.local` files
+speculatively. Confirmed by Dan, 2026-05-21.
 
 ## Decisions log
 
 | # | Decision | Value |
 |---|----------|-------|
-| End state | identical (#1), `*.local` fallback only where forced | assumed, confirm |
+| End state | identical (#1), `*.local` fallback only where forced | **confirmed 2026-05-21** |
+| Primary guardrail | **LOSE NO DATA** — preserve everything; throw away only after both Macs verified | **confirmed 2026-05-21** |
+| Snapshot branch labels | `macbook-pro` (Dan-Seely D6RX99KXNMAA), `macbook-air` | confirmed 2026-05-21 |
 | Cross-machine compare | Run Claude on BOTH Macs, coordinate via git | set |
 | Progress tracking | this `NOTES.md` (in repo) + Claude memory | set |
 | Canonical Mac | none global — decide source-of-truth per file from diffs | set |
@@ -25,7 +27,10 @@ paths, work-only tools). Do NOT create `.local` files speculatively.
 
 ## Hosts
 
-### MacBook-Air (this Mac)
+> Note: section headings no longer say "this Mac" — this NOTES.md is edited
+> from either Mac via worktree; "this Mac" is ambiguous in the file itself.
+
+### MacBook-Air
 - macOS 26.4.1, Apple Silicon, zsh, iTerm2 3.6.10
 - Uncommitted at project start: M .gitconfig .iterm/...plist README.md
   karabiner/karabiner.json zsh/.zprofile zsh/.zshrc ; untracked .oh-my-zsh/
@@ -33,9 +38,45 @@ paths, work-only tools). Do NOT create `.local` files speculatively.
 - iTerm: `~/.iterm` is a SYMLINK -> this repo's `.iterm/`, and iTerm has
   `LoadPrefsFromCustomFolder=1`, so iTerm reads/writes its real prefs into
   the repo. Plain gitignore is not viable.
+- ⚠️ **`snapshot/macbook-air` not yet pushed.** Pre-cleanup uncommitted
+  edits to `.gitconfig`, `karabiner/karabiner.json`, `zsh/.zprofile`,
+  `zsh/.zshrc` are still local-only on macbook-air as of 2026-05-21.
+  Pass 2+ on align/cleanup should not proceed until those are pushed
+  (either as a `snapshot/macbook-air` branch or as commits to
+  `align/cleanup` on Pass 2's first work).
 
-### <other Mac> (fill in from its Claude session)
-- (the other Mac's Claude session appends its facts here — own this section)
+### MacBook-Pro (joined 2026-05-21)
+- Hostname: `D6RX99KXNMAA` (Dan-Seely). Apple Silicon. zsh.
+- Checkout location: `~/dev/dotfiles` (worktree `~/dev/dotfiles-align`
+  added 2026-05-21 for align/cleanup work that won't clobber live config).
+- Uncommitted at project start: M .gitconfig Brewfile
+  karabiner/karabiner.json zsh/.zprofile zsh/.zshrc ; untracked .oh-my-zsh/
+  fzf/ zed/ zsh/.zshenv karabiner/automatic_backups/karabiner_2024..2025*
+  ; stash@{0} = pre-@adadapted era (different email + 1Password SSH signing
+  setup); .DS_Store junk.
+- iTerm: **no decouple needed here.** `~/.iterm` does NOT exist on this
+  Mac. `LoadPrefsFromCustomFolder` is unset (default 0). iTerm reads its
+  real plist from `~/Library/Preferences/com.googlecode.iterm2.plist`.
+- `~/.fzf.zsh`: does NOT exist on this Mac. Repo's `fzf/.fzf.zsh` is
+  dormant; safe to ignore.
+- `~/.oh-my-zsh` → repo's `.oh-my-zsh/` (same pattern as macbook-air). 35M,
+  upstream-tracking, nothing personal under `custom/`. Restorable via
+  upstream installer; long-term plan = un-symlink and install standardly.
+- iTerm Dynamic Profiles **DO** matter here: `zsh/.zshrc` defines a
+  `theme()` function that emits `OSC 1337 SetProfile=theme-{lavender,sage,
+  slate,amber,crimson}`. These dynamic profiles need to be exported to
+  `iterm/DynamicProfiles/dan.json` as part of Pass 0's "Other Mac" step.
+  Profile content lives at `~/Library/Application Support/iTerm2/
+  DynamicProfiles/theme-profiles.json` per the inline `.zshrc` comment.
+- `snapshot/macbook-pro` pushed at `9ac1d68` (2026-05-21). Includes
+  `snapshot/stash@0.patch` so the pre-@adadapted stash data travels even
+  if macbook-pro's local clone is destroyed. The stash entry is also
+  left intact in the local stash list (belt + suspenders). Commit is
+  unsigned — `op-ssh-sign` invocation didn't fire in the agent shell
+  context; throwaway branch so not addressed.
+- Skipped from snapshot: `.oh-my-zsh/`, `.DS_Store`, `fzf/.DS_Store`,
+  `zed/embeddings/` (SQLite cache). All deliberate, documented in the
+  snapshot's commit message.
 
 ## Session handoff (this Mac, for Pass 1)
 
@@ -84,6 +125,14 @@ Baton rule (avoid clobbering): the line below names who may edit
 `align/cleanup` right now. Take it, push, set back to `idle` when done.
 
     BATON: idle
+
+### BATON history
+
+- 2026-05-21 — macbook-pro briefly took BATON to register this Mac's
+  arrival (host facts in §Hosts, snapshot capture record, iTerm
+  Dynamic Profiles work item, decisions log updates). No file content
+  reconciliation done; Pass 2+ deferred pending `snapshot/macbook-air`.
+  Released BATON → idle in same commit.
 
 Flow:
 1. MacBook-Air creates `align/cleanup` off `master`, adds this NOTES.md.
@@ -154,6 +203,20 @@ Flow:
 
 ## Open questions
 
-- End-state #1 vs #2 — confirm interpretation above.
-- iTerm plist (Pass 0) — which handling option.
-- Which Mac is the "other" Mac; its hostname + state.
+- ~~End-state #1 vs #2~~ — confirmed #1 (Dan, 2026-05-21).
+- ~~iTerm plist (Pass 0) — which handling option~~ — settled (Pass 0
+  design above is final). On macbook-pro side, the only remaining iTerm
+  work is exporting the 5 `theme-*` dynamic profiles for the `theme()`
+  shell function — folded into Pass 0's "Other Mac" step.
+- ~~Which Mac is the "other" Mac~~ — macbook-pro (D6RX99KXNMAA).
+- **`snapshot/macbook-air` doesn't exist on origin yet.** Macbook-air's
+  pre-cleanup uncommitted edits to `.gitconfig`, `karabiner.json`,
+  `zsh/.zprofile`, `zsh/.zshrc` are not on the server. Either push a
+  verbatim snapshot or fold them into Pass 2/3/4 commits on
+  `align/cleanup`. Until then, macbook-pro cannot diff against
+  macbook-air's actual file content.
+- Should the Claude Code config (`~/.claude/CLAUDE.md`, `settings.json`,
+  `keybindings.json`, `statusline-command.sh`, `skills/`) be folded into
+  this repo as a new pass? `.gitignore` already contains
+  `.claude/*.local.json` which suggests yes. Dan proposed this — decide
+  whether to do it as Pass 6 or defer to a follow-on project.
