@@ -1,0 +1,13 @@
+# Tool-managed installs — restored by setup, not dotfiles content
+.oh-my-zsh/
+.fzf.zsh
+
+# iTerm2 prefs are decoupled from this repo (curated export only).
+# See NOTES.md / Pass 0. The live plist is per-machine and not tracked.
+.iterm/
+
+# Karabiner auto-generated backups (not configuration)
+karabiner/automatic_backups/
+
+# Claude Code project-local settings (per-machine permissions/state)
+.claude/*.local.json
