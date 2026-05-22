@@ -46,6 +46,7 @@ speculatively. Confirmed by Dan, 2026-05-21.
 | Symlink manifest | per-Mac `manifests/symlinks-<host>.txt` committed to repo as LOSE-NO-DATA pre-flight inventory of symlinks-into-repo | **confirmed 2026-05-22** |
 | `.bash_profile`, `.zshrc-backup-24-jan-2022` | keep as-is, no content review | confirmed 2026-05-22 |
 | `~/.claude/` config in repo | yes — Pass 6 (deferred to end), selective symlinks pattern | confirmed 2026-05-22 |
+| Graveyard pattern (`archived/`) | for files queued for deletion but not yet yanked (honors LOSE-NO-DATA). Move to `archived/<filename>`; deletion happens as a separate operation later. Empty for now. | **confirmed 2026-05-22** |
 
 ## Hosts
 
@@ -322,14 +323,18 @@ is also fine and matches macbook-pro's pattern.
         config user.email` returns work email, `git -C ~/anywhere-else
         config user.email` returns personal email, shells open clean,
         `brew bundle check` passes.
-- [ ] **Pass 3 — `.zshrc` review** (medium-risk: shell startup)
-      - 107-line divergence per Mac vs master. Per-block canonical
-        decisions: pyenv init flag, plugin list, `codex-inline` alias,
-        `theme()` function (depends on Pass 0's dynamic profiles),
-        fzf init, anything else surfacing in Pass 1.5's diff dive.
+- [ ] **Pass 3 — `.zshrc` + `.p10k.zsh`** (medium-risk: shell startup)
+      - 107-line `.zshrc` divergence per Mac vs master. Per-block
+        canonical decisions: pyenv init flag, plugin list,
+        `codex-inline` alias, `theme()` function (depends on Pass 0's
+        dynamic profiles), fzf init, anything else surfacing in
+        Pass 1.5's diff dive.
+      - `.p10k.zsh` (Powerlevel10k prompt config, tracked + live-
+        symlinked on air): per-Mac diff + canonical decision. Tightly
+        coupled to `.zshrc` so grouped here.
       - VERIFICATION GATE: receiving Mac protocol + open fresh shell
-        on each Mac, confirm no startup errors, `theme()` swaps
-        profiles on pro.
+        on each Mac, confirm no startup errors, prompt renders
+        correctly (p10k), `theme()` swaps profiles on pro.
 - [ ] **Pass 4 — Karabiner** (highest-risk: keyboard remapping)
       - **Investigation first** (in Pass 1.5 or as Pass 4's opening
         step): macbook-air's −500-line cut vs master is asymmetric
@@ -412,11 +417,11 @@ home into the repo:
 
 3. **`.bash_profile` is tracked (4428 bytes) but NO `~/.bash_profile`
    symlink exists** — it's an orphan in the repo. Decisions log says
-   "keep" but that decision predated this discovery. Either it was
-   never symlinked on this Mac (and macbook-pro may differ), or the
-   symlink was removed at some point. **Re-examine in light of: does
-   macbook-pro have a `~/.bash_profile` symlink? Is the file actually
-   useful?** Answer-pending.
+   "keep" but that decision predated this discovery. **DECISION:
+   hold pending macbook-pro's manifest.** If pro also has no live
+   symlink, candidate for `archived/.bash_profile` (graveyard pattern,
+   see Decisions log) rather than active deletion. If pro DOES have
+   a live symlink, restore it on air.
 
 4. **`~/.bashrc` is a regular file on this Mac**, not from repo:
    contains `[ -f ~/.fzf.bash ] && source ~/.fzf.bash`. fzf-installed.
@@ -437,14 +442,159 @@ home into the repo:
    tracking at root, move to `fzf/` subdir (pro's pattern), or
    un-track entirely and let fzf installer manage it.
 
-### Diff dive — not yet started
+### Diff dive — Pass 2 scope (2026-05-22)
 
-Next: read both snapshots vs master for each scope file:
-`.gitconfig`, `.zprofile`, `.zshenv`, `Brewfile`, `.zshrc`, `.p10k.zsh`,
-`karabiner.json`, `zed/keymap.json`, `zed/settings.json`,
-`fzf/.fzf.{bash,zsh}`. Capture proposed canonical + rationale here.
+#### `.gitconfig`
 
-### Secrets scan — not yet started
+**Master state** (relevant fields):
+- `[user] email = dseely@adadapted.com` (work)
+- `signingkey = ssh-ed25519 AAAAC3...` (public half of SSH signing key — not a secret)
+- `[gpg] format = ssh`, `[gpg "ssh"] program = /Applications/1Password.app/.../op-ssh-sign`
+- `[commit] gpgsign = true`
+- `[includeIf "gitdir:~/dev/adadapted/"] path = ~/dev/adadapted/.gitconfig`
+  (external file, NOT in repo — currently INERT on macbook-air:
+  `~/dev/adadapted/` dir exists but no `.gitconfig` inside)
+- `[core] excludesfile = /Users/dan/.gitignore_global` (dangling: file
+  does NOT exist on macbook-air; git silently no-ops the missing path)
+
+**macbook-air diff**:
+- Email: `dseely@adadapted.com` → `dan@danseely.net` ✓ matches the
+  end-state we want.
+- Adds `[credential "https://github.com"]` and `[credential "https://gist.github.com"]`
+  blocks with `gh auth git-credential` helper — standard output of
+  `gh auth setup-git`.
+
+**macbook-pro diff**:
+- Email: unchanged (still `dseely@adadapted.com` — work-only Mac so
+  no urgency to flip historically, but Pass 2 will flip it).
+- Same gh credential helper blocks (identical to air).
+- Cosmetic noise: `{$HOME}` brace syntax replacing absolute paths in
+  `excludesfile` and `[commit] template`. **`{$HOME}` is NOT valid
+  git config syntax** — git supports `~/` and absolute paths only,
+  not brace expansion. These edits silently break those config keys
+  on pro (excludesfile and stCommitMsg refs become literal `{$HOME}/...`
+  paths that don't resolve). Looks like editor auto-touch (JetBrains
+  template-style?). **Drop these changes.**
+- Cosmetic noise: trailing whitespace stripped on `path = ` line; tab
+  → 4-space indent on one `[gpg] format = ssh` line. Drop these too.
+
+**Secrets scan**: signingkey is the **public** half (`ssh-ed25519 AAAAC3...`
+prefix is the public-key format). 1Password's `op-ssh-sign` holds
+the private key. Safe to commit. No tokens or passwords in any
+diff. ✓ clean.
+
+**Proposed canonical** (Pass 2 work):
+```
+[user]
+    name = Dan Seely
+    email = dan@danseely.net
+    signingkey = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPqOHWqaDcvrbxJZBsMlHl+pZq+u9SD+HvqCQGJW3s7Y
+
+[core]
+    editor = vim
+    excludesfile = ~/.gitignore_global   # use ~ not absolute — portable + host-agnostic
+
+[includeIf "gitdir:~/dev/adadapted/"]
+    path = ~/dev/dotfiles/gitconfig/adadapted   # repo-internal, replaces old external ref
+
+[credential "https://github.com"]
+    helper =
+    helper = !/opt/homebrew/bin/gh auth git-credential
+
+[credential "https://gist.github.com"]
+    helper =
+    helper = !/opt/homebrew/bin/gh auth git-credential
+```
+…plus all other existing master sections (`[filter "lfs"]`, `[pull]`,
+sourcetree, `[commit]`, `[init]`, `[gpg]`, etc.) unchanged.
+
+New file `gitconfig/adadapted` (3 lines, repo-tracked):
+```
+[user]
+    email = dseely@adadapted.com
+```
+
+**Open follow-ups for Pass 2**:
+- The old external `~/dev/adadapted/.gitconfig` file (referenced by
+  master) doesn't exist on air; if it exists on pro it can be
+  deleted post-Pass-2 (inert once we re-point includeIf into repo).
+- `~/.gitignore_global` is referenced but missing on air. Either
+  create the file with sensible content (.DS_Store, etc.) — could
+  be Pass 5 — or remove the reference. **Defer to Pass 5.**
+
+#### `zsh/.zprofile`
+
+**Master**: 11 lines, Poetry/Pyenv/GPG env exports. No Homebrew.
+
+**Both Macs**: append the same `eval "$(/opt/homebrew/bin/brew shellenv)"`.
+Functionally identical; cosmetic comment-case difference (`# Homebrew`
+vs `# homebrew`).
+
+**Proposed canonical**:
+```
+# Homebrew
+eval "$(/opt/homebrew/bin/brew shellenv)"
+```
+Pick capitalized comment.
+
+#### `zsh/.zshenv`
+
+**Master**: file does not exist.
+**macbook-air**: not present (regular file at `~/.zshenv` per Pass 1.5
+manifest probe — but `zsh/.zshenv` in repo doesn't exist on air either).
+**macbook-pro**: adds new file at `zsh/.zshenv`:
+```
+. "$HOME/.cargo/env"
+```
+
+**macbook-air cargo check**: Rust IS installed (`~/.cargo/env` exists,
+`cargo` and `rustc` resolve in PATH). Adoption is safe.
+
+**Proposed canonical**: adopt pro's, with `[ -f ]` guard for safety
+(file might not exist on a fresh clone before rustup runs):
+```
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+```
+Pass 2 work also includes setting up the `~/.zshenv → zsh/.zshenv`
+symlink on macbook-air (currently a regular non-repo file at `~/.zshenv`
+— investigate its content before clobbering, in case there's anything
+worth preserving in `archived/`).
+
+#### `Brewfile`
+
+**Master**: 67-line Brewfile with taps/brews/casks/mas.
+**macbook-air**: no diff (file not touched).
+**macbook-pro** diff:
+- `+cask 'keyboard-cleaner'` (lockscreen tool for keyboard wipe-down)
+- `mas 'XCode', id: 497799835` → commented out (XCode via mas-cli is
+  flaky; common workaround is to install manually)
+
+**Proposed canonical**: adopt pro's changes verbatim. Both are
+harmless on air (keyboard-cleaner gets installed; XCode line stays
+commented). Identical-on-both-Macs achieved.
+
+#### `README.md`
+
+**macbook-air**: adds two trailing spaces to one line — noise from
+editor/linter. Discard.
+
+**macbook-pro**: substantive reorganization of "High-level todos"
+section, adds "Automate installs" and "Changes" sections. Actual
+content change.
+
+**Proposed canonical**: adopt pro's diff. Discard air's whitespace.
+Optional: also update the README's symlink list with the current
+manifest contents (since `.iterm` is gone, `.zprofile`, `.config/karabiner`,
+`.oh-my-zsh`, `.p10k.zsh`, `.fzf.zsh` should be there). **Defer
+README content modernization to a separate later cleanup pass — not
+in Pass 2 scope.**
+
+### Secrets scan — done for Pass 2 files (2026-05-22)
+
+No secrets in scope. `.gitconfig` signingkey is the public half of an
+ed25519 SSH key (private half lives in 1Password). No tokens, no
+inline passwords, no `.netrc`-style URLs with auth. Pass 3+ files
+(`.zshrc`, `.p10k.zsh`, etc.) still to scan.
 
 ### Legacy WIP assessment — not yet started
 
