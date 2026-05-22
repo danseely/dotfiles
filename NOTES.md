@@ -596,6 +596,156 @@ ed25519 SSH key (private half lives in 1Password). No tokens, no
 inline passwords, no `.netrc`-style URLs with auth. Pass 3+ files
 (`.zshrc`, `.p10k.zsh`, etc.) still to scan.
 
+### Pass 2 canonical — APPROVED (Dan, 2026-05-22)
+
+All five files' canonical proposals approved:
+- `.gitconfig`: air's diff wins; pro's `{$HOME}` brace edits + cosmetic
+  noise dropped.
+- `zsh/.zprofile`: capitalized `# Homebrew` comment.
+- `zsh/.zshenv`: pro's content with `[ -f ]` guard.
+- `Brewfile`: pro's two changes verbatim.
+- `README.md`: pro's todos reorg; air's whitespace discarded.
+- `~/.gitignore_global` dangling ref → Pass 5 (create file with
+  sensible content like `.DS_Store`).
+- Old external `~/dev/adadapted/.gitconfig`: delete post-Pass-2 on pro,
+  **conditional on first verifying its content has nothing else worth
+  preserving** (likely just `email = dseely@adadapted.com` which is
+  now covered by the new repo override). Pro to confirm-and-delete
+  as part of Pass 2 verification.
+
+### `~/.zshenv` content investigation — RESOLVED (2026-05-22)
+
+`~/.zshenv` on macbook-air = regular file, 21 bytes, dated Jun 29 2023.
+Content: `. "$HOME/.cargo/env"` (single line, no newline at end).
+
+Same content as pro's tracked `zsh/.zshenv`. Auto-created by rustup
+installer on both Macs at install time. Replacing air's regular file
+with `~/.zshenv → ~/dev/dotfiles/zsh/.zshenv` symlink is **content-
+preserving** — nothing to archive.
+
+Pass 2 work plan for `.zshenv` on air: `rm ~/.zshenv && ln -s
+~/dev/dotfiles/zsh/.zshenv ~/.zshenv`. (After the repo file is
+committed with the `[ -f ]` guard.)
+
+### Diff dive — Pass 3 scope (2026-05-22)
+
+#### `.p10k.zsh`
+
+Both Macs' snapshots have **zero diff** vs master — file is byte-
+identical everywhere. Live-symlinked on air per Pass 1.5 manifest.
+**No canonical decision needed.** Pass 3 work: confirm pro also has
+`~/.p10k.zsh` symlinked (or set up the symlink there if not), then
+ship as-is.
+
+#### `zsh/.zshrc` — analysis
+
+**Master**: 172 lines. Stock p10k+oh-my-zsh, pyenv, poetry, lots of
+2023-era stale stuff (PHP 7.4, vagrant alias, hardcoded
+`/Users/dan/google-cloud-sdk/`).
+
+**macbook-air diff** (12 lines, small):
+1. **pyenv PATH**: adds `$PYENV_ROOT` to the PATH alongside
+   `$PYENV_ROOT/bin`. Old line commented out.
+2. **plugins**: adds `history-substring-search` to oh-my-zsh plugins.
+3. **codex-inline alias**: `alias codex-inline='command codex --no-alt-screen'`
+   — Codex CLI defaults to alt-screen mode which clears visible history
+   in iTerm2; this alias runs it in inline mode.
+4. **pyenv init**: switches `eval "$(pyenv init --path)"` to
+   `eval "$(pyenv init -)"` (older `--path` line commented out).
+
+**macbook-pro diff** (107 lines, dense):
+1. **VS Code / Cursor agent guard** at file top (~12 lines): early
+   `return` if `$PAGER` looks like a Cursor agent's PAGER. References
+   Cursor forum post. Prevents agent terminal hangs.
+2. **`export ZSH="/Users/dan/.oh-my-zsh"` → `"$HOME/.oh-my-zsh"`**: portability fix.
+3. **pyenv**: replaces master's PATH line with `[[ -d $PYENV_ROOT/bin ]]
+   && export PATH=...`, adds BOTH `eval "$(pyenv init --path)"` AND
+   `eval "$(pyenv init -)"` at top. Removes the old eval at file
+   bottom. **Matches pyenv docs' current recommendation** (both inits).
+4. **poetry**: adds a `# or this?` commented alternative (noise; drop).
+5. **plugins**: drops `zsh-nvm` (replaced with manual NVM lazy-load).
+   Does NOT add `history-substring-search` (air's addition).
+6. **Moves Google Cloud SDK source lines** from before pyenv init
+   to after LDFLAGS. Hardcoded path is `/Users/dseely/google-cloud-sdk/`
+   — work username, **NOT portable to air**.
+7. **rbenv** commented-out line `# eval "$(rbenv init - zsh)"` —
+   inactive; drop.
+8. **iTerm2 shell integration**:
+   `test -e "${HOME}/.iterm2_shell_integration.zsh" && source ...`
+   — guarded source; safe on either Mac (no-op if file missing).
+9. **Antigravity PATH**: `export PATH="/Users/dseely/.antigravity/antigravity/bin:$PATH"`
+   — hardcoded work username, no guard. **Drop in canonical** (tool
+   installer can re-add per Mac if Dan ever installs Antigravity on
+   air; not dotfiles' job).
+10. **NVM manual lazy-load**:
+    ```
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+    ```
+    Replaces zsh-nvm plugin. **Adopt — both file-guarded, NVM is
+    installed on air (`~/.nvm/` confirmed).**
+11. **`theme()` function** (~60 lines): OSC 1337 SetProfile + iTerm2
+    Python API hybrid. Depends on `iterm/DynamicProfiles/dan.json`
+    (already in repo from Pass 0 pro work). **Adopt verbatim.** Works
+    on air once the dynamic profile file gets symlinked into
+    `~/Library/Application Support/iTerm2/DynamicProfiles/` (separate
+    Pass 0 air-side step or post-merge cleanup).
+
+**Air-side install state** (relevant to canonical decisions):
+- `~/google-cloud-sdk` MISSING → gcloud lines harmlessly no-op via
+  `[ -f ... ]` guards already in source.
+- `~/.nvm` EXISTS → manual NVM lazy-load works on air.
+- `~/.iterm2_shell_integration.zsh` MISSING → guarded source no-ops
+  cleanly until installed.
+- `~/.antigravity` MISSING → drop Antigravity PATH (don't ship dead refs).
+- VS Code installed; Cursor not. The agent-guard preamble is harmless
+  either way.
+
+**Proposed canonical `.zshrc` structure** (high level — full file
+written in Pass 3 itself):
+
+1. **Top**: pro's Cursor/VS Code agent guard verbatim.
+2. **p10k instant prompt** block: unchanged from master.
+3. **PATH exports**: unchanged from master.
+4. **`export ZSH="$HOME/.oh-my-zsh"`** (pro's portability fix).
+5. **pyenv block**: pro's version — conditional PATH, both eval lines
+   at top.
+6. **poetry, theme, etc.**: master shape, no `# or this?` noise.
+7. **plugins**: `(git docker docker-compose z history-substring-search)`
+   — pro's drop of zsh-nvm + air's add of history-substring-search.
+8. **oh-my-zsh source**: unchanged.
+9. **aliases**: master + air's `codex-inline` alias.
+10. **Google Cloud SDK source**: use `$HOME/google-cloud-sdk/...`
+    (universal path), keep `[ -f ... ]` guards. Pro's "moved to after
+    LDFLAGS" placement is fine; could leave at master's location too.
+    **Defer placement to Dan's preference.**
+11. **LDFLAGS / CPPFLAGS / PHP 7.4 PATH lines**: flag as stale
+    2023-era cruft. **Candidate for removal or `archived/`. Defer
+    Dan decision.**
+12. **iTerm2 shell integration source**: pro's guarded line, adopt.
+13. **NVM lazy-load**: pro's three lines, adopt.
+14. **`theme()` function**: pro's full implementation, adopt verbatim.
+15. **Antigravity PATH**: dropped.
+16. **rbenv commented line**: dropped.
+17. **gcloud paths**: `$HOME/` not `/Users/dan/` or `/Users/dseely/`.
+
+**Open questions for Dan before Pass 3**:
+- a) Stale 2023-era lines (PHP 7.4 PATH, zlib LDFLAGS/CPPFLAGS,
+  `vagrant ssh` alias, `weather` alias, `awsauth` alias, AWS-CLI bits,
+  `.git-completion.bash` source) — keep as-is, remove, or move to
+  `archived/zshrc-snippets/`?
+- b) gcloud source line placement: master's position (before
+  LDFLAGS) or pro's moved position (after LDFLAGS)? Functional
+  difference: none if PATH order doesn't matter for gcloud.
+- c) `theme()` function: install dynamic profiles on air in Pass 3
+  itself (so theme works post-Pass-3), or defer air iTerm dynamic-
+  profile setup until post-merge?
+
+**Secrets scan — `.zshrc`**: no tokens, no inline passwords, no
+auth URLs. Comment references to `aws-auth.sh` are an external script
+that handles MFA — script isn't in repo. ✓ clean.
+
 ### Legacy WIP assessment — not yet started
 
 ### Macbook-pro Pass 1 verification — not yet started
