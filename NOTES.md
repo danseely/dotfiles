@@ -146,7 +146,7 @@ Branches:
 Baton rule (avoid clobbering): the line below names who may edit
 `align/cleanup` right now. Take it, push, set back to `idle` when done.
 
-    BATON: idle
+    BATON: macbook-air (Pass 1.5 — 2026-05-22)
 
 ### BATON history
 
@@ -275,12 +275,21 @@ is also fine and matches macbook-pro's pattern.
         On each Mac:
         ```
         mkdir -p manifests
-        find "$HOME" -type l 2>/dev/null -lname "*/dev/dotfiles/*" \
-          -exec sh -c 'printf "%s -> %s\n" "$1" "$(readlink "$1")"' _ {} \; \
-          | sort > manifests/symlinks-$(scutil --get LocalHostName).txt
+        find "$HOME" -type l 2>/dev/null -exec sh -c '
+          for f; do
+            t=$(readlink "$f")
+            case "$t" in
+              *dotfiles*) printf "%s -> %s\n" "$f" "$t" ;;
+            esac
+          done
+        ' _ {} + | sort > "manifests/symlinks-$(scutil --get LocalHostName).txt"
         ```
         Commit each Mac's file. These are the danger-check reference
         for every subsequent pull into main.
+        Note: do NOT use `find -lname "*/dev/dotfiles/*"` — BSD find's
+        `-lname` glob does not traverse `/`, so the pattern returns
+        zero matches even when symlinks exist. The shell-loop form
+        above is robust.
       - **Diff dive** on both snapshots vs master: `.gitconfig`,
         `.zprofile`, `.zshenv`, `Brewfile`, `.zshrc`, `karabiner.json`,
         Zed config, fzf subdir. Output: per-file analysis notes in
@@ -363,6 +372,87 @@ is also fine and matches macbook-pro's pattern.
       - `manifests/`: decide at merge time — keep as setup reference
         or delete with NOTES.
       - Tag known-good state (e.g., `aligned-2026-05`).
+
+## Pass 1.5 analysis (in progress, macbook-air, 2026-05-22)
+
+### Symlink manifest — macbook-air (7 entries)
+
+Generated `manifests/symlinks-MacBook-Air.txt`. Live symlinks from
+home into the repo:
+
+```
+~/.config/karabiner -> ~/dev/dotfiles/karabiner        (DIRECTORY symlink)
+~/.fzf.zsh          -> ~/dev/dotfiles/.fzf.zsh         (file; repo file is gitignored)
+~/.gitconfig        -> ~/dev/dotfiles/.gitconfig
+~/.oh-my-zsh        -> ~/dev/dotfiles/.oh-my-zsh       (gitignored long-term)
+~/.p10k.zsh         -> ~/dev/dotfiles/.p10k.zsh
+~/.zprofile         -> ~/dev/dotfiles/zsh/.zprofile
+~/.zshrc            -> ~/dev/dotfiles/zsh/.zshrc
+```
+
+**Scope-affecting findings**:
+
+1. **`.p10k.zsh` is in scope but was missing from the pass plan.**
+   Tracked in repo (9875 bytes, Aug 2023), live-symlinked. Powerlevel10k
+   theme config. Needs cross-Mac canonical decision. **Add to Pass 3
+   (.zshrc-adjacent) or its own bullet under Pass 2.**
+
+2. **`~/.config/karabiner` is a DIRECTORY-level symlink**, not a file
+   symlink for karabiner.json specifically. Implication: karabiner.app
+   writes its `automatic_backups/` directly into the repo dir (already
+   handled by Pass 1's gitignore). Also: changes to repo's
+   `karabiner/karabiner.json` propagate to karabiner.app instantly via
+   the dir symlink. This makes Pass 4's "selective live test"
+   trickier — the standard `ln -sf <worktree>/...` trick at the
+   karabiner.json level won't work because the parent dir is already
+   a symlink. Test instead by temporarily re-pointing the WHOLE
+   directory symlink: `ln -sfn ~/dev/dotfiles-align/karabiner ~/.config/karabiner`,
+   karabiner reloads, revert if broken. Update Pass 4 verification
+   notes to reflect.
+
+3. **`.bash_profile` is tracked (4428 bytes) but NO `~/.bash_profile`
+   symlink exists** — it's an orphan in the repo. Decisions log says
+   "keep" but that decision predated this discovery. Either it was
+   never symlinked on this Mac (and macbook-pro may differ), or the
+   symlink was removed at some point. **Re-examine in light of: does
+   macbook-pro have a `~/.bash_profile` symlink? Is the file actually
+   useful?** Answer-pending.
+
+4. **`~/.bashrc` is a regular file on this Mac**, not from repo:
+   contains `[ -f ~/.fzf.bash ] && source ~/.fzf.bash`. fzf-installed.
+   Out of repo scope, but worth noting macbook-pro might have a
+   different bashrc state.
+
+5. **`~/.zshenv` is a regular file** on macbook-air (not symlink, not
+   from repo). Macbook-pro had `zsh/.zshenv` in its snapshot as a
+   *repo-tracked* addition. Pass 2 needs to decide whether air adopts
+   pro's `.zshenv` (and creates the symlink) or pro's is dropped.
+
+6. **`.fzf.zsh` inconsistency confirmed**: macbook-air has live
+   symlink `~/.fzf.zsh → ~/dev/dotfiles/.fzf.zsh`, but the file at
+   that path is **gitignored** as of Pass 1. So the symlink target
+   exists on this Mac's disk only as long as no one removes the
+   gitignored file. Macbook-pro has `fzf/.fzf.zsh` in a subdir
+   (tracked). **Pass 5's fzf canonical decision must pick:** revive
+   tracking at root, move to `fzf/` subdir (pro's pattern), or
+   un-track entirely and let fzf installer manage it.
+
+### Diff dive — not yet started
+
+Next: read both snapshots vs master for each scope file:
+`.gitconfig`, `.zprofile`, `.zshenv`, `Brewfile`, `.zshrc`, `.p10k.zsh`,
+`karabiner.json`, `zed/keymap.json`, `zed/settings.json`,
+`fzf/.fzf.{bash,zsh}`. Capture proposed canonical + rationale here.
+
+### Secrets scan — not yet started
+
+### Legacy WIP assessment — not yet started
+
+### Macbook-pro Pass 1 verification — not yet started
+
+(blocked on macbook-pro's next Claude session pulling latest
+`align/cleanup` into worktree and running the receiving-Mac
+protocol — see §Hardened verification protocol)
 
 ## Resolved side-issues (do not re-investigate)
 

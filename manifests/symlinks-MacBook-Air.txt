@@ -1,0 +1,7 @@
+/Users/dan/.config/karabiner -> /Users/dan/dev/dotfiles/karabiner
+/Users/dan/.fzf.zsh -> /Users/dan/dev/dotfiles/.fzf.zsh
+/Users/dan/.gitconfig -> /Users/dan/dev/dotfiles/.gitconfig
+/Users/dan/.oh-my-zsh -> /Users/dan/dev/dotfiles/.oh-my-zsh
+/Users/dan/.p10k.zsh -> /Users/dan/dev/dotfiles/.p10k.zsh
+/Users/dan/.zprofile -> /Users/dan/dev/dotfiles/zsh/.zprofile
+/Users/dan/.zshrc -> /Users/dan/dev/dotfiles/zsh/.zshrc
