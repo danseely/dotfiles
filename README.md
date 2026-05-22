@@ -6,7 +6,7 @@ Manually craete ssh key, then add it (`~/.ssh/id_rsa.pub`) to Github & Gitlab ac
 cd ~
 ssh-keygen -t rsa -b 2048
 ```
-
+  
 clone repo
 
 ```

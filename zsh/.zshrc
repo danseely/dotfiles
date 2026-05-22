@@ -15,7 +15,8 @@ export ZSH="/Users/dan/.oh-my-zsh"
 # export PATH="$HOME/.pyenv/bin:$PATH"
 # export PATH="/usr/local/bin:$PATH"
 export PYENV_ROOT="$HOME/.pyenv"
-command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+# command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+command -v pyenv >/dev/null || export PATH="$PYENV_ROOT:$PYENV_ROOT/bin:$PATH"
 
 # poetry
 export PATH="$HOME/.local/bin:$PATH"
@@ -87,7 +88,7 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git docker docker-compose zsh-nvm z)
+plugins=(git docker docker-compose zsh-nvm z history-substring-search)
 
 # disable something about insecure something, idk (Dan)
 ZSH_DISABLE_COMPFIX="true"
@@ -123,6 +124,9 @@ zstyle ':completion:*:*:git:*' script ~/.git-completion.bash
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 alias vim="nvim"
 alias vvs="vagrant ssh"
+
+# Run Codex normally in iTerm2; inline mode can clear visible history.
+alias codex-inline='command codex --no-alt-screen'
 
 # AWS cli auth script
 # Usage: `awsauth <mfa token code>
@@ -164,8 +168,8 @@ if [ -f '/Users/dan/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/dan/g
 # DEGBUGGING: let compilers find Homebrew's zlib
 # export PKG_CONFIG_PATH="/usr/local/opt/zlib/lib/pkgconfig"
 #
-eval "$(pyenv init --path)"
-# eval "$(pyenv init)"
+# eval "$(pyenv init --path)"
+eval "$(pyenv init -)"
 export LDFLAGS="-L/usr/local/opt/zlib/lib -L/usr/local/opt/bzip2/lib"
 export CPPFLAGS="-I/usr/local/opt/zlib/include -I/usr/local/opt/bzip2/include"
 export PATH="/usr/local/opt/php@7.4/bin:$PATH"
