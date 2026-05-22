@@ -40,6 +40,12 @@ speculatively. Confirmed by Dan, 2026-05-21.
 | Keep `.bash_profile` | yes | set |
 | Keep `.zshrc-backup-24-jan-2022` | yes | set |
 | iTerm plist handling | Curated export only (Pass 0 design below) | set |
+| Merge cadence | one merge `align/cleanup` → `master` at project end (master = clean rollback target throughout) | **confirmed 2026-05-22** |
+| `.gitconfig` identity | global `dan@danseely.net`; `includeIf "gitdir:~/dev/adadapted/"` overrides to `dseely@adadapted.com` via repo-internal `gitconfig/adadapted` (referenced as `path = ~/dev/dotfiles/gitconfig/adadapted`). Byte-identical `.gitconfig` ships on both Macs; inert on machines without `~/dev/adadapted/`. | **confirmed 2026-05-22** |
+| Verification protocol | receiving Mac pulls into worktree first, runs danger check (deleted-files × symlink manifest), optionally tests selective symlinks, only then advances main checkout | **confirmed 2026-05-22** |
+| Symlink manifest | per-Mac `manifests/symlinks-<host>.txt` committed to repo as LOSE-NO-DATA pre-flight inventory of symlinks-into-repo | **confirmed 2026-05-22** |
+| `.bash_profile`, `.zshrc-backup-24-jan-2022` | keep as-is, no content review | confirmed 2026-05-22 |
+| `~/.claude/` config in repo | yes — Pass 6 (deferred to end), selective symlinks pattern | confirmed 2026-05-22 |
 
 ## Hosts
 
@@ -144,6 +150,15 @@ Baton rule (avoid clobbering): the line below names who may edit
 
 ### BATON history
 
+- 2026-05-22 — macbook-air took BATON for **plan revision**: expanded
+  pass scope (Brewfile, Zed config, `.zshenv`, fzf subdir added);
+  added Pass 1.5 (reality check, diff dive, secrets scan, symlink
+  manifest); added Pass 6 (Claude config, deferred); hardened
+  verification with worktree-first receiving-Mac protocol + symlink
+  manifest danger check; locked in `includeIf gitdir:` mechanism for
+  `.gitconfig` work-vs-personal email; single-merge-at-end cadence.
+  NOTES.md only — no `align/cleanup` content commits. Released
+  BATON → idle in same commit.
 - 2026-05-22 — macbook-air took BATON to push `snapshot/macbook-air`
   (`da6d5bc` off master), unblocking Pass 2+. Updated §Hosts entry,
   resolved the snapshot-gap §Open question. No file content
@@ -157,10 +172,45 @@ Baton rule (avoid clobbering): the line below names who may edit
 Flow:
 1. MacBook-Air creates `align/cleanup` off `master`, adds this NOTES.md.
 2. Each Mac pushes `snapshot/<hostname>` of its current state.
-3. Per file in scope: `git diff snapshot/A..snapshot/B -- <file>` →
+3. Each Mac commits its `manifests/symlinks-<host>.txt` (Pass 1.5).
+4. Per file in scope: `git diff snapshot/A..snapshot/B -- <file>` →
    decide canonical → apply onto `align/cleanup` → record decision here.
-4. Pass-by-pass. Merge `align/cleanup` → `master` only when a pass is
-   verified on both Macs. Delete snapshot branches at the end.
+5. Pass-by-pass with verification gate between (see protocol below).
+6. **Single merge** `align/cleanup` → `master` at project end (one
+   commit, after every pass green on both Macs). Delete snapshot
+   branches. master is rollback target throughout.
+
+### Hardened verification protocol (2026-05-22)
+
+**Receiving-Mac protocol** (any Mac that did NOT author the pass being
+verified). Apply for every pass that touches tracked file content:
+
+1. **Pull into worktree only**, never directly into main checkout. If a
+   worktree doesn't exist, create one: `git worktree add ~/dev/dotfiles-align align/cleanup`.
+2. **Danger check** — list files this pull would remove from working tree:
+   ```
+   git diff --name-only --diff-filter=D HEAD..origin/align/cleanup
+   ```
+   Cross-reference against `manifests/symlinks-<host>.txt`. If any
+   deletion is a live symlink target, do NOT advance main yet. Resolve
+   first: re-point symlink, replace with file, or accept and clean up
+   the symlink post-pull. Document the resolution in NOTES.
+3. **Selective live test** (higher-risk passes only — Karabiner, .zshrc).
+   Temporarily `ln -sf <worktree-path> <live-path>` for the affected
+   file, exercise behavior, revert symlink if broken. Examples:
+   - `.zshrc`: `ln -sf ~/dev/dotfiles-align/zsh/.zshrc ~/.zshrc; zsh -l -i -c true; <revert if errors>`
+   - `karabiner.json`: `ln -sf ~/dev/dotfiles-align/karabiner/karabiner.json ~/.config/karabiner/karabiner.json` (karabiner auto-reloads); revert if remap behavior broken.
+4. **Advance main checkout**: in main, `git pull --ff-only origin align/cleanup`.
+5. **Smoke test** the pass-specific behavior in main; mark verified in NOTES.
+6. **Rollback if needed**: `git checkout snapshot/<host>` restores all
+   repo content to pre-cleanup state. Symlinks in `~` are untouched
+   throughout — only the *content at their targets* changes, which
+   reverts with the checkout.
+
+**Authoring-Mac protocol**: author's choice on main-checkout vs worktree.
+Main-checkout authoring means continuous self-test (live config reflects
+every commit) which has been working for macbook-air. Worktree authoring
+is also fine and matches macbook-pro's pattern.
 
 ## Pass plan & status
 
@@ -214,16 +264,105 @@ Flow:
         + 9 tracked `karabiner/automatic_backups/karabiner_20{20,21}*.json`.
       - Orphan `.iterm/` dir still on disk; physically deletable once
         Dan confirms iTerm behaves correctly across a few launches.
-      - VERIFIED: iTerm launched cleanly post-decouple on MacBook-Air
+      - VERIFIED on macbook-air: iTerm launched cleanly post-decouple
         (Dan, 2026-05-20).
-- [ ] **Pass 2 — Easy real changes**: `.gitconfig` (email + gh helper),
-      `.zprofile` (brew shellenv). Revert/commit README whitespace.
-- [ ] **Pass 3 — `.zshrc` review**: pyenv init flag change, new plugin,
-      `codex-inline` alias — confirm on both Macs before committing.
-- [ ] **Pass 4 — Karabiner**: review the −500-line diff section by
-      section; confirm intentional vs silently dropped.
-- [ ] **Pass 5 — Reconcile other Mac**: per-file canonical decisions,
-      introduce `*.local` only where forced.
+      - ⚠️ NOT YET VERIFIED on macbook-pro: its main checkout is still
+        at `8deec2b` (pre-cleanup). Verification folded into Pass 1.5
+        below (worktree-first protocol applies).
+- [ ] **Pass 1.5 — Reality check, scope freeze, pre-flight inventory**
+      (no `align/cleanup` content commits — only NOTES + manifests)
+      - **Per-Mac symlink manifest** (LOSE-NO-DATA pre-flight inventory).
+        On each Mac:
+        ```
+        mkdir -p manifests
+        find "$HOME" -type l 2>/dev/null -lname "*/dev/dotfiles/*" \
+          -exec sh -c 'printf "%s -> %s\n" "$1" "$(readlink "$1")"' _ {} \; \
+          | sort > manifests/symlinks-$(scutil --get LocalHostName).txt
+        ```
+        Commit each Mac's file. These are the danger-check reference
+        for every subsequent pull into main.
+      - **Diff dive** on both snapshots vs master: `.gitconfig`,
+        `.zprofile`, `.zshenv`, `Brewfile`, `.zshrc`, `karabiner.json`,
+        Zed config, fzf subdir. Output: per-file analysis notes in
+        NOTES (proposed canonical + rationale).
+      - **Macbook-air's 5 legacy WIP mods**: assess each as "intended
+        canonical / partial WIP to amend / discard." They're inputs
+        to the canonical decision, NOT commit-as-Pass-2-input.
+      - **Secrets scan**: `.gitconfig` signingkey/credential tokens,
+        `.zshrc` inline credentials, any other suspicious content.
+      - **Macbook-pro Pass 1 verification**: with pro's manifest in
+        hand, pull Pass 1 (and Pass 0 dynamic profile file) into pro's
+        worktree, run danger check, advance main checkout once green.
+        Closes the Pass 1 verification gap.
+      - **Output**: revised per-file scope captured in NOTES, manifests
+        committed, pro on Pass 1 in main checkout, all open analytical
+        questions resolved before any Pass 2+ content commits.
+- [ ] **Pass 2 — Env & identity** (low-risk: shells + git config)
+      - `.gitconfig`: main file at repo root + `gitconfig/adadapted`
+        (3 lines, work-email override), referenced via
+        `[includeIf "gitdir:~/dev/adadapted/"] path = ~/dev/dotfiles/gitconfig/adadapted`.
+        Byte-identical `.gitconfig` on both Macs; inert on machines
+        without `~/dev/adadapted/`.
+      - `.zprofile`: brew shellenv. Apple-Silicon `/opt/homebrew` path
+        same on both Macs (both are Apple-Silicon per Hosts entries).
+      - `.zshenv`: decide adopt (pro's content) / omit / merge.
+      - `Brewfile`: reconcile pro's 3-line diff.
+      - `README.md` whitespace.
+      - VERIFICATION GATE: receiving Mac → worktree pull → danger
+        check → main pull → both Macs confirm `git -C ~/dev/adadapted
+        config user.email` returns work email, `git -C ~/anywhere-else
+        config user.email` returns personal email, shells open clean,
+        `brew bundle check` passes.
+- [ ] **Pass 3 — `.zshrc` review** (medium-risk: shell startup)
+      - 107-line divergence per Mac vs master. Per-block canonical
+        decisions: pyenv init flag, plugin list, `codex-inline` alias,
+        `theme()` function (depends on Pass 0's dynamic profiles),
+        fzf init, anything else surfacing in Pass 1.5's diff dive.
+      - VERIFICATION GATE: receiving Mac protocol + open fresh shell
+        on each Mac, confirm no startup errors, `theme()` swaps
+        profiles on pro.
+- [ ] **Pass 4 — Karabiner** (highest-risk: keyboard remapping)
+      - **Investigation first** (in Pass 1.5 or as Pass 4's opening
+        step): macbook-air's −500-line cut vs master is asymmetric
+        with macbook-pro's 36-line diff. Determine whether air's cut
+        was intentional pruning or a corruption/sync artifact, before
+        any canonical decision.
+      - **Section-by-section review** with Dan on what to keep —
+        karabiner.json has discrete `complex_modifications` blocks
+        that can be assessed individually.
+      - VERIFICATION GATE: receiving Mac runs selective live test in
+        worktree FIRST (`ln -sf <worktree>/karabiner/karabiner.json
+        ~/.config/karabiner/karabiner.json`, karabiner reloads
+        automatically on file change, test key remap behavior, revert
+        symlink if broken). Only then advance main. Karabiner's
+        `automatic_backups/` is an additional fallback alongside
+        `snapshot/<host>`.
+- [ ] **Pass 5 — Editor & tool config**
+      - `zed/keymap.json`, `zed/settings.json`: pro has them, air
+        doesn't. Adopt on air? gitignore? Decide based on whether
+        air uses Zed.
+      - `fzf/` subdir vs root `.fzf.zsh` (already gitignored at root):
+        canonical location for fzf init shell loader.
+      - Anything else surfaced in Pass 1.5.
+      - VERIFICATION GATE: receiving Mac protocol per file.
+- [ ] **Pass 6 — Claude Code config in repo** (deferred to end)
+      - Bring `~/.claude/CLAUDE.md`, `settings.json`, `keybindings.json`,
+        `statusline-command.sh`, `skills/` into repo at `claude/`
+        via **selective symlinks** from `~/.claude/<thing>` →
+        `~/dev/dotfiles/claude/<thing>`. Care: `~/.claude/` already
+        contains per-machine state (projects/, todos/, shell-snapshots/)
+        that must NOT be symlinked — only the config files Dan curates.
+      - Decide what's shared (e.g., `CLAUDE.md`, `settings.json`,
+        `skills/`) vs per-host (`*.local.json` already gitignored).
+      - VERIFICATION GATE: receiving Mac protocol + confirm Claude
+        sessions start cleanly with new symlinks in place.
+- [ ] **Final — Merge `align/cleanup` → `master`** in one commit,
+      after all passes verified green on both Macs.
+      - Delete `snapshot/macbook-air`, `snapshot/macbook-pro`.
+      - Delete `NOTES.md`.
+      - `manifests/`: decide at merge time — keep as setup reference
+        or delete with NOTES.
+      - Tag known-good state (e.g., `aligned-2026-05`).
 
 ## Resolved side-issues (do not re-investigate)
 
@@ -247,8 +386,10 @@ Flow:
   2026-05-22 — pushed at `da6d5bc`. Macbook-pro can now run
   `git diff snapshot/macbook-air..snapshot/macbook-pro -- <file>` for
   Pass 2+ per-file reconciliation.
-- Should the Claude Code config (`~/.claude/CLAUDE.md`, `settings.json`,
-  `keybindings.json`, `statusline-command.sh`, `skills/`) be folded into
-  this repo as a new pass? `.gitignore` already contains
-  `.claude/*.local.json` which suggests yes. Dan proposed this — decide
-  whether to do it as Pass 6 or defer to a follow-on project.
+- ~~Should the Claude Code config be folded into this repo?~~ Resolved
+  2026-05-22 — yes, as Pass 6 (deferred to end), selective symlinks
+  from `~/.claude/<thing>` → repo's `claude/<thing>`. See Pass 6
+  in §Pass plan.
+
+**No live open questions** as of 2026-05-22. New questions go inline
+in the relevant pass entry or in this section as they arise.
