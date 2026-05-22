@@ -53,13 +53,13 @@ speculatively. Confirmed by Dan, 2026-05-21.
   .fzf.zsh karabiner/automatic_backups/2023..2025*
 - iTerm: `~/.iterm` is a SYMLINK -> this repo's `.iterm/`, and iTerm has
   `LoadPrefsFromCustomFolder=1`, so iTerm reads/writes its real prefs into
-  the repo. Plain gitignore is not viable.
-- ⚠️ **`snapshot/macbook-air` not yet pushed.** Pre-cleanup uncommitted
-  edits to `.gitconfig`, `karabiner/karabiner.json`, `zsh/.zprofile`,
-  `zsh/.zshrc` are still local-only on macbook-air as of 2026-05-21.
-  Pass 2+ on align/cleanup should not proceed until those are pushed
-  (either as a `snapshot/macbook-air` branch or as commits to
-  `align/cleanup` on Pass 2's first work).
+  the repo. Plain gitignore is not viable. (Resolved in Pass 1.)
+- `snapshot/macbook-air` pushed at `da6d5bc` (2026-05-22), branched off
+  `master` (e5385e2). Captures the 5 tracked-file working-tree mods
+  verbatim: `.gitconfig`, `README.md`, `karabiner/karabiner.json`,
+  `zsh/.zprofile`, `zsh/.zshrc`. Untracked files on disk (`.oh-my-zsh/`,
+  `.fzf.zsh`, `.claude/`, karabiner auto-backups) deliberately skipped
+  — tool-managed / now-gitignored, not config to align.
 
 ### MacBook-Pro (joined 2026-05-21)
 - Hostname: `D6RX99KXNMAA` (Dan-Seely). Apple Silicon. zsh.
@@ -144,6 +144,10 @@ Baton rule (avoid clobbering): the line below names who may edit
 
 ### BATON history
 
+- 2026-05-22 — macbook-air took BATON to push `snapshot/macbook-air`
+  (`da6d5bc` off master), unblocking Pass 2+. Updated §Hosts entry,
+  resolved the snapshot-gap §Open question. No file content
+  reconciliation done. Released BATON → idle in same commit.
 - 2026-05-21 — macbook-pro briefly took BATON to register this Mac's
   arrival (host facts in §Hosts, snapshot capture record, iTerm
   Dynamic Profiles work item, decisions log updates). No file content
@@ -199,7 +203,7 @@ Flow:
       - Do iTerm prefs surgery with **iTerm fully quit**, driven from
         Terminal.app/Warp via `defaults write` (no GUI, no race).
 - [x] **Pass 1 — Hygiene** — DONE on branch `align/cleanup`,
-      commit `7f1d979` (not pushed, master untouched).
+      commit `d9da728` (pushed, master untouched).
       - iTerm decoupled from repo: backup at
         `~/iterm-prefs-backup-20260519.plist`; rich 8-profile config
         imported to iTerm standard domain; `LoadPrefsFromCustomFolder=0`;
@@ -239,12 +243,10 @@ Flow:
   work is exporting the 5 `theme-*` dynamic profiles for the `theme()`
   shell function — folded into Pass 0's "Other Mac" step.
 - ~~Which Mac is the "other" Mac~~ — macbook-pro (D6RX99KXNMAA).
-- **`snapshot/macbook-air` doesn't exist on origin yet.** Macbook-air's
-  pre-cleanup uncommitted edits to `.gitconfig`, `karabiner.json`,
-  `zsh/.zprofile`, `zsh/.zshrc` are not on the server. Either push a
-  verbatim snapshot or fold them into Pass 2/3/4 commits on
-  `align/cleanup`. Until then, macbook-pro cannot diff against
-  macbook-air's actual file content.
+- ~~`snapshot/macbook-air` doesn't exist on origin yet.~~ Resolved
+  2026-05-22 — pushed at `da6d5bc`. Macbook-pro can now run
+  `git diff snapshot/macbook-air..snapshot/macbook-pro -- <file>` for
+  Pass 2+ per-file reconciliation.
 - Should the Claude Code config (`~/.claude/CLAUDE.md`, `settings.json`,
   `keybindings.json`, `statusline-command.sh`, `skills/`) be folded into
   this repo as a new pass? `.gitignore` already contains
