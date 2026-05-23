@@ -101,15 +101,24 @@ speculatively. Confirmed by Dan, 2026-05-21.
   `zed/embeddings/` (SQLite cache). All deliberate, documented in the
   snapshot's commit message.
 
-## Session handoff (this Mac, for Pass 1)
+## Session handoff (HISTORICAL — Pass 1, done 2026-05-20)
 
-Pass 1 needs iTerm fully quit. Plan: quit iTerm, then RESUME this same
-session from Terminal.app (cleaner than cold-start — full context):
-`claude --resume 6f8d330c-7a40-4828-8dc7-4c64276ea022` (or `--continue`).
-If that resume ever fails, cold-start works too: a fresh `claude` in the
-repo reads this NOTES.md + project memory and continues from here.
+> Superseded. Pass 1 is complete and verified on macbook-air. Kept
+> for the record. Fresh sessions: use the §Fresh-session quickstart
+> at the top, not this section.
 
-## Resuming on the OTHER Mac (next session, 2026-05-20+)
+Pass 1 needed iTerm fully quit. The session was resumed from
+Terminal.app via `claude --resume 6f8d330c-...`. Cold-start also works:
+a fresh `claude` in the repo reads this NOTES.md + project memory.
+
+## Resuming on the OTHER Mac (HISTORICAL — pro arrived 2026-05-21)
+
+> Superseded. macbook-pro joined on 2026-05-21, pushed its snapshot,
+> and did Pass 0 dynamic-profile export. The onboarding steps below
+> are done. The pro-side work that REMAINS (Pass 1.5 manifest + Pass 1
+> verification) is tracked in §Pass plan and §Pass 1.5 analysis →
+> "Macbook-pro Pass 1 verification — STILL PENDING". Commit hash
+> below (`7f1d979`) is stale (amended to `d9da728`).
 
 `align/cleanup` has been pushed to origin (commit `7f1d979`). On the
 other Mac:
@@ -394,7 +403,7 @@ is also fine and matches macbook-pro's pattern.
         or delete with NOTES.
       - Tag known-good state (e.g., `aligned-2026-05`).
 
-## Pass 1.5 analysis (in progress, macbook-air, 2026-05-22)
+## Pass 1.5 analysis (air-side DONE 2026-05-23; pro-side pending)
 
 ### Symlink manifest — macbook-air (7 entries)
 
@@ -978,14 +987,6 @@ Blocked on macbook-pro's next Claude session. Pro needs to:
    1.5 analyses all land cleanly. Mark Pass 1 verified in NOTES.
 
 This is the gate before Pass 2 content commits begin.
-
-### Legacy WIP assessment — not yet started
-
-### Macbook-pro Pass 1 verification — not yet started
-
-(blocked on macbook-pro's next Claude session pulling latest
-`align/cleanup` into worktree and running the receiving-Mac
-protocol — see §Hardened verification protocol)
 
 ## Resolved side-issues (do not re-investigate)
 
