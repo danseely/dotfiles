@@ -147,10 +147,19 @@ Branches:
 Baton rule (avoid clobbering): the line below names who may edit
 `align/cleanup` right now. Take it, push, set back to `idle` when done.
 
-    BATON: macbook-air (Pass 1.5 — 2026-05-22)
+    BATON: idle
 
 ### BATON history
 
+- 2026-05-22 → 2026-05-23 — macbook-air took BATON for **Pass 1.5
+  diff dive** (multi-commit work over two days). Completed: symlink
+  manifest generated + committed; Pass 2/3/4/5 file diff analyses
+  written with proposed canonicals; Pass 2 + Pass 3 decisions
+  approved by Dan; secrets scans clean across all Pass 2-5 files;
+  legacy WIP assessment resolved (the 5 air working-tree mods ARE
+  air's snapshot content, no separate analysis needed). Pass 1.5
+  pro-side work (its manifest + Pass 1 verification) still
+  pending — pro will take BATON when ready. Released BATON → idle.
 - 2026-05-22 — macbook-air took BATON for **plan revision**: expanded
   pass scope (Brewfile, Zed config, `.zshenv`, fzf subdir added);
   added Pass 1.5 (reality check, diff dive, secrets scan, symlink
@@ -270,8 +279,14 @@ is also fine and matches macbook-pro's pattern.
       - ⚠️ NOT YET VERIFIED on macbook-pro: its main checkout is still
         at `8deec2b` (pre-cleanup). Verification folded into Pass 1.5
         below (worktree-first protocol applies).
-- [ ] **Pass 1.5 — Reality check, scope freeze, pre-flight inventory**
-      (no `align/cleanup` content commits — only NOTES + manifests)
+- [~] **Pass 1.5 — Reality check, scope freeze, pre-flight inventory**
+      (mostly done; pro side still pending)
+      - ✅ macbook-air: manifest committed, full diff dive analysis
+        for Pass 2-5 in NOTES, secrets scans clean, Dan approvals on
+        Pass 2 + Pass 3 canonical proposals, WIP assessment resolved.
+      - ⏳ macbook-pro: needs to generate its own manifest, run Pass 1
+        verification protocol, and confirm Pass 0 + Pass 1 + 1.5
+        analyses are coherent on its side before Pass 2 begins.
       - **Per-Mac symlink manifest** (LOSE-NO-DATA pre-flight inventory).
         On each Mac:
         ```
@@ -730,21 +745,240 @@ written in Pass 3 itself):
 16. **rbenv commented line**: dropped.
 17. **gcloud paths**: `$HOME/` not `/Users/dan/` or `/Users/dseely/`.
 
-**Open questions for Dan before Pass 3**:
-- a) Stale 2023-era lines (PHP 7.4 PATH, zlib LDFLAGS/CPPFLAGS,
-  `vagrant ssh` alias, `weather` alias, `awsauth` alias, AWS-CLI bits,
-  `.git-completion.bash` source) — keep as-is, remove, or move to
-  `archived/zshrc-snippets/`?
-- b) gcloud source line placement: master's position (before
-  LDFLAGS) or pro's moved position (after LDFLAGS)? Functional
-  difference: none if PATH order doesn't matter for gcloud.
-- c) `theme()` function: install dynamic profiles on air in Pass 3
-  itself (so theme works post-Pass-3), or defer air iTerm dynamic-
-  profile setup until post-merge?
+**Pass 3 decisions — APPROVED (Dan, 2026-05-22)**:
+- a) **Keep all 2023-era stale lines as-is** in canonical `.zshrc`.
+  Deal with archive/remove later (separate cleanup pass after merge).
+- b) **gcloud source placement: pro's** (after LDFLAGS/CPPFLAGS).
+- c) **Install dynamic profiles on air in Pass 3.** `theme()` works
+  on both Macs after Pass 3 lands. Implementation: symlink
+  `~/Library/Application Support/iTerm2/DynamicProfiles/dan.json`
+  → `~/dev/dotfiles/iterm/DynamicProfiles/dan.json` on air. Same
+  pattern pro will follow post-merge (its DEFERRED Phase 2 step
+  in Pass 0).
 
 **Secrets scan — `.zshrc`**: no tokens, no inline passwords, no
 auth URLs. Comment references to `aws-auth.sh` are an external script
 that handles MFA — script isn't in repo. ✓ clean.
+
+### Diff dive — Pass 4 scope: `karabiner/karabiner.json` (2026-05-22)
+
+**The "−500-line cut" mystery resolved.** Master is 1225 lines /
+50KB; both Macs are ~830 lines / ~37KB. **The bulk of the drop is
+Karabiner's serializer omitting default-valued fields** when it
+re-writes the file (it strips `is_pointing_device: false`,
+`ignore: false`, and other default-equal fields that don't need
+explicit storage). Not a content cut.
+
+Structural check across all three refs:
+- All three have 1 profile (`Default`), selected, with **19 complex
+  modification rules — identical names**.
+- 18 of 19 rule bodies are byte-identical across master/air/pro.
+  Only **rule [1]** differs (see below).
+- `fn_function_keys`: 12 entries, byte-identical across all three.
+
+**What actually changed (semantic-level):**
+
+1. **`global` key removed on both Macs** (master had
+   `check_for_updates_on_startup`, `show_in_menu_bar`,
+   `show_profile_name_in_menu_bar`). UI prefs — harmless, defaults
+   apply when missing.
+2. **`profile.parameters` removed on both Macs** (master had
+   `delay_milliseconds_before_open_device: 1000`). Reverts to
+   Karabiner default.
+3. **`complex_modifications.parameters` removed on both Macs**
+   (master had 5 timing params: simultaneous_threshold, to_delayed_
+   action_delay, to_if_alone_timeout, to_if_held_down_threshold,
+   mouse_motion_to_scroll.speed). Reverts to defaults.
+4. **`devices`** — per-machine hardware list. Master had 15 devices;
+   air has 20 (5 more — devices added over time as new keyboards/mice
+   plugged in), pro has 18 (3 more than master, 2 fewer than air).
+   **Karabiner auto-populates `devices` at runtime** as it
+   encounters new hardware. **Treat as ignored-for-canonical** — both
+   Macs will re-append their own hardware. No `*.local` mechanism
+   needed; Karabiner handles divergence itself.
+5. **`virtual_hid_keyboard`** — schema migrated. Master has
+   `country_code`, `indicate_sticky_modifier_keys_state`,
+   `mouse_key_xy_scale`; both Macs added `keyboard_type_v2: ansi`
+   (Karabiner's newer schema). Pro's is the most-compact (just
+   `caps_lock_delay_milliseconds`, `keyboard_type`, `keyboard_type_v2`).
+   **Adopt pro's compact form** — it matches Karabiner's current
+   default-omission style.
+6. **`simple_modifications`** — all three share `caps_lock →
+   right_control`. **Air alone adds**:
+   ```
+   f5 → apple_vendor_top_case_key_code: illumination_down
+   f6 → apple_vendor_top_case_key_code: illumination_up
+   ```
+   Backlight key remaps that make sense on Air's built-in keyboard.
+   On pro's keyboard (probably external) the source `f5`/`f6` keys
+   don't conflict with illumination handling, so these remaps would
+   be **inert no-ops on pro**. **Safe to canonicalize on both Macs.**
+7. **Rule [1] divergence** (only rule that differs across the three):
+   - Rule description: "Change right option to Hyper (i.e.,
+     command+control+option+shift)"
+   - **master + air**: rule is **enabled** (no `enabled` key —
+     defaults to true).
+   - **pro**: rule has `"enabled": false`.
+   - One-line diff: pro adds `"enabled": false`. **Decision needed.**
+
+**Asymmetry investigation conclusion**: NOT a corruption or sync
+artifact. The cut is mostly Karabiner's serializer normalizing
+default values out. The two genuine cross-Mac decisions are tiny:
+rule [1] enabled-or-not, and adopt-pro's compact `virtual_hid_keyboard`.
+
+**Proposed canonical** (Pass 4 work):
+- Adopt the compact pro-style file as a base (drop default-equal
+  fields the way Karabiner does).
+- 19 complex modification rules: keep all 19, bodies as-is.
+- **Rule [1] (right_option → Hyper)**: decision pending — Dan needs
+  to confirm enabled or disabled.
+- `simple_modifications`: caps_lock + f5/f6 (air's superset). Inert
+  on pro's keyboard, useful on air's.
+- `virtual_hid_keyboard`: pro's compact form
+  (`caps_lock_delay_milliseconds: 0`, `keyboard_type: ansi`,
+  `keyboard_type_v2: ansi`).
+- `devices`: leave whatever's in the repo; Karabiner will auto-append
+  each Mac's hardware at runtime. **No reconciliation needed.**
+- `global`, `profile.parameters`, `complex_modifications.parameters`:
+  omit (defaults apply).
+
+**Verification gate (Pass 4)** updated based on Pass 1.5 manifest
+finding: `~/.config/karabiner` is a directory-level symlink, so
+selective-live-test cannot just re-point `karabiner.json`. Re-point
+the whole dir:
+```
+ln -sfn ~/dev/dotfiles-align/karabiner ~/.config/karabiner
+```
+Karabiner reloads automatically on file change. Revert with same
+command back to main checkout if remap behavior breaks.
+
+**Open question for Dan**:
+- Rule [1] "right_option → Hyper" — **enabled (master/air state) or
+  disabled (pro state)?** Pro likely disabled it intentionally; do
+  you remember why, and is that intent something to carry across, or
+  was it test-only?
+
+**Secrets scan — karabiner.json**: pure config, no secrets. ✓ clean.
+
+### Diff dive — Pass 5 scope (2026-05-23)
+
+#### `zed/keymap.json`, `zed/settings.json`
+
+**Tracked in repo (pro-only addition)**: pro committed both files at
+`zed/keymap.json` and `zed/settings.json` in its snapshot. Air had no
+tracked Zed config.
+
+**Live state on air**:
+- Zed IS installed (`/Applications/Zed.app`, `~/.config/zed/`).
+- Air has its OWN `~/.config/zed/keymap.json` (381 bytes) and
+  `~/.config/zed/settings.json` (528 bytes) — regular files, not from
+  repo.
+
+**Diff: air's local vs pro's tracked**:
+- `keymap.json`: **byte-identical**. Both Macs converged on the same
+  keybindings independently.
+- `settings.json`: **1 line differs** —
+  ```
+  air:  // "dock": "right",    (commented out — terminal floats)
+  pro:     "dock": "right",    (active — terminal docked to right)
+  ```
+  Otherwise identical (font size 15, autosave 1s, JetBrains Mono,
+  terminal blinking off).
+
+**Proposed canonical**:
+- Adopt pro's tracked versions in repo at `zed/keymap.json` and
+  `zed/settings.json`.
+- For `settings.json`'s terminal dock: **decision needed** —
+  active "dock: right" (pro's) or commented out / floating (air's)?
+- Air-side Pass 5 work:
+  1. Move air's existing `~/.config/zed/{keymap,settings}.json` to
+     `archived/zed-macbook-air-prepass/` (honor LOSE-NO-DATA — they
+     match the repo versions ± the one dock line anyway, so they
+     might just be deleted, but archive first per the graveyard
+     pattern).
+  2. `ln -s ~/dev/dotfiles/zed/keymap.json ~/.config/zed/keymap.json`
+  3. `ln -s ~/dev/dotfiles/zed/settings.json ~/.config/zed/settings.json`
+
+**Side observation** (not Pass 5 scope, just noted): air's
+`~/.config/zed/` also has `.tmp0gtP7h` (5KB), `.tmpMKF2gP` (122KB),
+`conversations/`, `embeddings/` — Zed's runtime state, not config.
+Leave alone.
+
+#### `fzf/.fzf.bash`, `fzf/.fzf.zsh`
+
+**Tracked in repo (pro-only addition)**: pro added at `fzf/.fzf.bash`
+and `fzf/.fzf.zsh`. Air has nothing tracked in `fzf/`; air has a
+**gitignored** `.fzf.zsh` at repo root with old-style content.
+
+**Content comparison**:
+- **Pro's `fzf/.fzf.zsh`** (modern, 6 lines):
+  ```
+  if [[ ! "$PATH" == */opt/homebrew/opt/fzf/bin* ]]; then
+    PATH="${PATH:+${PATH}:}/opt/homebrew/opt/fzf/bin"
+  fi
+  source <(fzf --zsh)
+  ```
+  Uses `fzf --zsh` (fzf v0.48+ command) — single-source-of-truth from
+  fzf itself, auto-includes completion + key-bindings.
+- **Air's gitignored root `.fzf.zsh`** (old style, ~11 lines): manually
+  sources `/opt/homebrew/opt/fzf/shell/completion.zsh` and
+  `key-bindings.zsh`. Pre-`fzf --zsh` approach. Functionally
+  equivalent but more boilerplate.
+- **Pro's `fzf/.fzf.bash`**: same modern pattern with `fzf --bash`.
+
+**Loading mechanism**: all three `.zshrc` versions have
+`[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh` (master line 150, air line
+154, pro line 171). So the symlink target at `~/.fzf.zsh` is what
+loads. No `.zshrc` changes needed in Pass 5 for fzf.
+
+**Proposed canonical**:
+- Adopt pro's modern `fzf/.fzf.{bash,zsh}` in repo (tracked).
+- Air-side Pass 5 work:
+  1. Move repo root `.fzf.zsh` (old-style, gitignored, ~341 bytes,
+     dated Aug 2023) to `archived/.fzf.zsh` per graveyard pattern.
+  2. Update `~/.fzf.zsh` symlink: previously
+     `~/.fzf.zsh → ~/dev/dotfiles/.fzf.zsh` (the old file we just
+     archived); change to `~/.fzf.zsh → ~/dev/dotfiles/fzf/.fzf.zsh`.
+  3. Update `.gitignore`: remove the `.fzf.zsh` line at root (file
+     no longer present there).
+- Pro-side Pass 5 work: confirm pro's `~/.fzf.zsh` symlink points at
+  the in-repo `fzf/.fzf.zsh` (likely already does per pro's manifest,
+  TBD).
+
+**Open question for Dan**:
+- Zed `settings.json` terminal dock: **`"dock": "right"` active or
+  commented out?** (Pro's current state vs air's.)
+
+**Secrets scan — Pass 5 files**: pure config; no secrets. ✓ clean.
+
+### Legacy WIP assessment — RESOLVED (2026-05-23)
+
+The 5 working-tree mods on macbook-air (`.gitconfig`, `README.md`,
+`karabiner.json`, `.zprofile`, `.zshrc`) ARE the input to
+`snapshot/macbook-air`'s commit. The diff dive above analyzed each
+file's air-snapshot content against master and pro's snapshot,
+producing per-file canonical proposals. **No separate "WIP
+assessment" needed — the analysis IS the assessment.**
+
+Pass 2 onwards will commit the **proposed canonical** (synthesized
+from both Macs' analyses) onto `align/cleanup`, not commit air's
+WIP mods as-is.
+
+### Macbook-pro Pass 1 verification — STILL PENDING
+
+Blocked on macbook-pro's next Claude session. Pro needs to:
+1. Generate its symlink manifest (`manifests/symlinks-<host>.txt`).
+2. Pull latest `align/cleanup` (including Pass 0's dynamic profile
+   file + Pass 1's gitignore + all Pass 1.5 analysis) into its
+   worktree at `~/dev/dotfiles-align`.
+3. Run danger check on its main checkout (currently at `8deec2b`,
+   way behind).
+4. Advance main checkout once green. Symlinks (TBD from pro's
+   manifest) will reflect the new state.
+5. Confirm Pass 0's dynamic profile work + Pass 1 gitignore + Pass
+   1.5 analyses all land cleanly. Mark Pass 1 verified in NOTES.
+
+This is the gate before Pass 2 content commits begin.
 
 ### Legacy WIP assessment — not yet started
 
