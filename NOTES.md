@@ -282,8 +282,9 @@ is also fine and matches macbook-pro's pattern.
 - [~] **Pass 1.5 — Reality check, scope freeze, pre-flight inventory**
       (mostly done; pro side still pending)
       - ✅ macbook-air: manifest committed, full diff dive analysis
-        for Pass 2-5 in NOTES, secrets scans clean, Dan approvals on
-        Pass 2 + Pass 3 canonical proposals, WIP assessment resolved.
+        for Pass 2-5 in NOTES, secrets scans clean, ALL Dan decisions
+        in (Pass 2, Pass 3, Pass 4 rule [1] = disabled, Pass 5 Zed
+        dock = right), WIP assessment resolved. Air side fully done.
       - ⏳ macbook-pro: needs to generate its own manifest, run Pass 1
         verification protocol, and confirm Pass 0 + Pass 1 + 1.5
         analyses are coherent on its side before Pass 2 begins.
@@ -852,11 +853,9 @@ ln -sfn ~/dev/dotfiles-align/karabiner ~/.config/karabiner
 Karabiner reloads automatically on file change. Revert with same
 command back to main checkout if remap behavior breaks.
 
-**Open question for Dan**:
-- Rule [1] "right_option → Hyper" — **enabled (master/air state) or
-  disabled (pro state)?** Pro likely disabled it intentionally; do
-  you remember why, and is that intent something to carry across, or
-  was it test-only?
+**Rule [1] decision — APPROVED (Dan, 2026-05-23)**: **disabled.**
+Canonical karabiner.json carries rule [1] "right_option → Hyper"
+with `"enabled": false` (pro's state).
 
 **Secrets scan — karabiner.json**: pure config, no secrets. ✓ clean.
 
@@ -945,9 +944,9 @@ loads. No `.zshrc` changes needed in Pass 5 for fzf.
   the in-repo `fzf/.fzf.zsh` (likely already does per pro's manifest,
   TBD).
 
-**Open question for Dan**:
-- Zed `settings.json` terminal dock: **`"dock": "right"` active or
-  commented out?** (Pro's current state vs air's.)
+**Zed dock decision — APPROVED (Dan, 2026-05-23)**: **pro's setting**
+— `"dock": "right"` active (terminal docked right). Canonical
+`zed/settings.json` = pro's tracked version verbatim.
 
 **Secrets scan — Pass 5 files**: pure config; no secrets. ✓ clean.
 
