@@ -160,6 +160,13 @@ Baton rule (avoid clobbering): the line below names who may edit
 
 ### BATON history
 
+- 2026-05-25 — macbook-air took BATON to add **Pass 7 (README
+  modernization & upkeep)** to the §Pass plan — a small ledger addition
+  slipped into the existing planning thread. Verified pro had pushed
+  nothing new (`origin/align/cleanup` in sync at `f6e5f49`,
+  `snapshot/macbook-pro` unchanged at `9ac1d68`). NOTES.md only — no
+  config content; new follow-on commit (not an amend, since `f6e5f49`
+  was already on origin). Released BATON → idle in same commit.
 - 2026-05-22 → 2026-05-23 — macbook-air took BATON for **Pass 1.5
   diff dive** (multi-commit work over two days). Completed: symlink
   manifest generated + committed; Pass 2/3/4/5 file diff analyses
@@ -395,6 +402,21 @@ is also fine and matches macbook-pro's pattern.
         `skills/`) vs per-host (`*.local.json` already gitignored).
       - VERIFICATION GATE: receiving Mac protocol + confirm Claude
         sessions start cleanly with new symlinks in place.
+- [ ] **Pass 7 — README modernization & upkeep** (the "separate later
+      cleanup pass" deferred from Pass 2 — see §Pass 2 `README.md` analysis)
+      - `README.md` is stale WIP: wrong clone path (`~/.dotfiles` vs the
+        real `~/dev/dotfiles`), outdated symlink list, and "High-level
+        todos" this project has already resolved (oh-my-zsh / fzf / iterm
+        portability).
+      - Rewrite to document the aligned end-state: correct setup steps, the
+        actual symlink set (from `manifests/symlinks-<host>.txt`), the
+        per-host `*.local` override mechanism (#2), and editor config (Zed
+        is now Homebrew-managed; Pass 5 `zed/` config — see Claude memory
+        [[pass5-zed-vscode-align]]).
+      - Treat README as a LIVING doc: refresh it as each pass lands so it
+        never drifts again; do a final accuracy pass at merge time.
+      - VERIFICATION GATE: README's documented symlinks/steps match reality
+        on BOTH Macs.
 - [ ] **Final — Merge `align/cleanup` → `master`** in one commit,
       after all passes verified green on both Macs.
       - Delete `snapshot/macbook-air`, `snapshot/macbook-pro`.
