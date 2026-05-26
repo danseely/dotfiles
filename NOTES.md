@@ -70,8 +70,14 @@ speculatively. Confirmed by Dan, 2026-05-21.
 
 ### MacBook-Pro (joined 2026-05-21)
 - Hostname: `D6RX99KXNMAA` (Dan-Seely). Apple Silicon. zsh.
-- Checkout location: `~/dev/dotfiles` (worktree `~/dev/dotfiles-align`
-  added 2026-05-21 for align/cleanup work that won't clobber live config).
+- Checkout location: `~/dev/dotfiles`. Main is on `align/cleanup` as of
+  2026-05-26 Pass 1 verification (was `snapshot/macbook-pro` during the
+  catch-up window). The `~/dev/dotfiles-align` worktree was removed
+  same day — git refused to share `align/cleanup` across worktrees
+  once main adopted it, and the worktree's insulation job was done.
+  Pro now uses main-checkout-authoring (same as air). Recreate a
+  temporary worktree for Pass 4 (karabiner) if its higher-risk
+  live-test flow wants an isolated copy.
 - Uncommitted at project start: M .gitconfig Brewfile
   karabiner/karabiner.json zsh/.zprofile zsh/.zshrc ; untracked .oh-my-zsh/
   fzf/ zed/ zsh/.zshenv karabiner/automatic_backups/karabiner_2024..2025*
@@ -160,6 +166,29 @@ Baton rule (avoid clobbering): the line below names who may edit
 
 ### BATON history
 
+- 2026-05-26 — macbook-pro took BATON for **Pass 1 verification + pro
+  symlink manifest** (pro-side Pass 1.5 closing). Generated
+  `manifests/symlinks-D6RX99KXNMAADan-Seely.txt` (6 entries —
+  karabiner dir, gitconfig, oh-my-zsh, p10k, zprofile, zshrc; no
+  `.fzf.zsh` symlink, no Zed symlinks yet). Ran danger check on main
+  (snapshot/macbook-pro → origin/align/cleanup): 21 working-tree
+  deletions, all benign — `fzf/.fzf.{bash,zsh}` (no live symlink),
+  16 `karabiner/automatic_backups/*.json` (historical Karabiner
+  auto-backups under symlinked dir, preserved in snapshot branch),
+  `snapshot/{README.md,stash@0.patch}` (preserved in snapshot branch
+  + local stash@{0}), `zsh/.zshenv` (no `~/.zshenv` on pro at all).
+  Advanced main checkout from `snapshot/macbook-pro` to `align/cleanup`
+  at 47683ca. **Removed the `~/dev/dotfiles-align` worktree** — its
+  job was to insulate live config from pre-verification align/cleanup
+  state; now that main IS align/cleanup, the worktree was a duplicate
+  and git refuses to share a branch across worktrees anyway. Pro
+  adopts the same main-checkout-authoring pattern air has been using;
+  Pass 4 (karabiner) can recreate a temporary worktree at flip time
+  if its higher-risk verification protocol needs it. Smoke-tested
+  post-advance: live `~/.zshrc`, `~/.gitconfig`, `~/.p10k.zsh`,
+  `~/.zprofile` symlinks resolve into the now-on-cleanup repo;
+  karabiner dir symlink resolves; new shell opens clean. Pass 1
+  + Pass 1.5 pro side now ✅. Released BATON → idle in same commit.
 - 2026-05-25 — macbook-air took BATON for **Pass 5 air-side fold-in**
   (later same day as the Pass 7 entry below). Landed `zed/` config in
   repo (new VS-Code-aligned canonical that supersedes the original
@@ -303,18 +332,22 @@ is also fine and matches macbook-pro's pattern.
         Dan confirms iTerm behaves correctly across a few launches.
       - VERIFIED on macbook-air: iTerm launched cleanly post-decouple
         (Dan, 2026-05-20).
-      - ⚠️ NOT YET VERIFIED on macbook-pro: its main checkout is still
-        at `8deec2b` (pre-cleanup). Verification folded into Pass 1.5
-        below (worktree-first protocol applies).
-- [~] **Pass 1.5 — Reality check, scope freeze, pre-flight inventory**
-      (mostly done; pro side still pending)
+      - VERIFIED on macbook-pro 2026-05-26: danger check clean (see
+        §Macbook-pro Pass 1 verification — DONE), main checkout
+        advanced from `snapshot/macbook-pro` → `align/cleanup`
+        (`47683ca`), live symlinks + new shell smoke-tested clean.
+- [x] **Pass 1.5 — Reality check, scope freeze, pre-flight inventory**
+      (DONE both sides 2026-05-26)
       - ✅ macbook-air: manifest committed, full diff dive analysis
         for Pass 2-5 in NOTES, secrets scans clean, ALL Dan decisions
         in (Pass 2, Pass 3, Pass 4 rule [1] = disabled, Pass 5 Zed
         dock = right), WIP assessment resolved. Air side fully done.
-      - ⏳ macbook-pro: needs to generate its own manifest, run Pass 1
-        verification protocol, and confirm Pass 0 + Pass 1 + 1.5
-        analyses are coherent on its side before Pass 2 begins.
+      - ✅ macbook-pro 2026-05-26: manifest committed
+        (`symlinks-D6RX99KXNMAADan-Seely.txt`, 6 entries), Pass 1
+        verification protocol run + green (see §Macbook-pro Pass 1
+        verification — DONE), main checkout advanced to `align/cleanup`.
+        Pass 0 / Pass 1 gitignore / Pass 1.5 analyses all coherent on
+        pro. **Gate cleared — Pass 2 content commits may begin.**
       - **Per-Mac symlink manifest** (LOSE-NO-DATA pre-flight inventory).
         On each Mac:
         ```
@@ -1085,21 +1118,80 @@ Pass 2 onwards will commit the **proposed canonical** (synthesized
 from both Macs' analyses) onto `align/cleanup`, not commit air's
 WIP mods as-is.
 
-### Macbook-pro Pass 1 verification — STILL PENDING
+### Macbook-pro Pass 1 verification — DONE 2026-05-26
 
-Blocked on macbook-pro's next Claude session. Pro needs to:
-1. Generate its symlink manifest (`manifests/symlinks-<host>.txt`).
-2. Pull latest `align/cleanup` (including Pass 0's dynamic profile
-   file + Pass 1's gitignore + all Pass 1.5 analysis) into its
-   worktree at `~/dev/dotfiles-align`.
-3. Run danger check on its main checkout (currently at `8deec2b`,
-   way behind).
-4. Advance main checkout once green. Symlinks (TBD from pro's
-   manifest) will reflect the new state.
-5. Confirm Pass 0's dynamic profile work + Pass 1 gitignore + Pass
-   1.5 analyses all land cleanly. Mark Pass 1 verified in NOTES.
+**Manifest generated** at `manifests/symlinks-D6RX99KXNMAADan-Seely.txt`
+(6 entries — produced by the documented `find` + `sort` heredoc with
+`scutil --get LocalHostName` as the suffix). Filename is uglier than
+air's `symlinks-MacBook-Air.txt` because pro's LocalHostName is
+`D6RX99KXNMAADan-Seely`; cross-references to "macbook-pro" elsewhere
+in NOTES point at the same file.
 
-This is the gate before Pass 2 content commits begin.
+Pro's 6 in-repo symlinks (no Zed entries yet — that's pro's Pass 5
+adoption work; no `.fzf.zsh` symlink — pro never had one, per §Hosts):
+
+```
+~/.config/karabiner -> ~/dev/dotfiles/karabiner     (DIRECTORY symlink)
+~/.gitconfig        -> ~/dev/dotfiles/.gitconfig
+~/.oh-my-zsh        -> ~/dev/dotfiles/.oh-my-zsh
+~/.p10k.zsh         -> ~/dev/dotfiles/.p10k.zsh
+~/.zprofile         -> ~/dev/dotfiles/zsh/.zprofile
+~/.zshrc            -> ~/dev/dotfiles/zsh/.zshrc
+```
+
+**Danger check** (`git diff --name-only --diff-filter=D
+HEAD..origin/align/cleanup`, where HEAD was `snapshot/macbook-pro`
+at `9ac1d68`): 21 deletions, all benign after manifest cross-ref:
+
+- `fzf/.fzf.bash`, `fzf/.fzf.zsh` — no `~/.fzf.zsh` symlink on pro
+  (confirmed in manifest); deleting the in-repo files affects nothing
+  live. Pass 5's fzf canonical decision will reintroduce them.
+- `karabiner/automatic_backups/karabiner_2020*.json` (9 files) +
+  `karabiner/automatic_backups/karabiner_202{4,5}*.json` (7 files) —
+  historical Karabiner auto-backups. Live at
+  `~/.config/karabiner/automatic_backups/` via the directory symlink,
+  so they DO disappear from disk on checkout. Preserved in
+  `snapshot/macbook-pro` on origin (rollback path intact). Karabiner
+  continues writing new auto-backups (now gitignored per Pass 1).
+- `snapshot/README.md`, `snapshot/stash@0.patch` — pro
+  snapshot-branch-only artifacts. Preserved in `snapshot/macbook-pro`
+  on origin; the stash entry itself also still in pro's local stash
+  list (`stash@{0}: WIP on master: bf99485 feat: add setup script`).
+- `zsh/.zshenv` — `~/.zshenv` does NOT exist on pro (regular file or
+  symlink). Pass 2 will reintroduce a `[ -f ]`-guarded version and
+  set up the symlink then.
+
+**Main checkout advanced** from `snapshot/macbook-pro` (`9ac1d68`) to
+`align/cleanup` (`47683ca`) via direct checkout (not `git pull
+--ff-only` — those two branches diverge by construction; FF-only
+applies to subsequent updates to `align/cleanup`). Required removing
+the `~/dev/dotfiles-align` worktree first since git refuses to share
+a branch across worktrees.
+
+**Worktree removed.** Its purpose was insulating live config from
+pre-verification align/cleanup state during pro's catch-up window.
+That window is closed. Pro now uses the same main-checkout-authoring
+pattern air uses. The Pass 4 (karabiner) verification protocol can
+recreate a temporary worktree at flip time if its higher-risk live
+test needs an isolated copy — easy to redo with
+`git worktree add ~/dev/dotfiles-align align/cleanup`.
+
+**Smoke test post-advance** (2026-05-26):
+- `git status` clean on tracked content (only expected untracked:
+  `.DS_Store`, `.claude/`, `.oh-my-zsh/`, `fzf/.DS_Store`,
+  `zed/embeddings/`, all gitignored or local-state).
+- All 6 in-repo symlinks resolve correctly: `~/.zshrc`,
+  `~/.gitconfig`, `~/.p10k.zsh`, `~/.zprofile`, `~/.oh-my-zsh`,
+  `~/.config/karabiner` all `readlink` into `~/dev/dotfiles/...`.
+- `zsh -l -i -c 'echo OK'` prints `OK` and exits 0 (one cosmetic
+  p10k gitstatus notice — common in short-lived non-interactive
+  subshells, not a regression).
+- `~/.config/karabiner/karabiner.json` reachable via dir symlink
+  (35877 bytes, unchanged from snapshot — same content in
+  align/cleanup, Pass 4 hasn't touched it yet).
+
+Pass 1 verification gap **closed**. Pass 2 content commits can begin
+on next BATON cycle.
 
 ## Resolved side-issues (do not re-investigate)
 

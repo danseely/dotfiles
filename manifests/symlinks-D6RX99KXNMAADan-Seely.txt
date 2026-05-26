@@ -1,0 +1,6 @@
+/Users/dseely/.config/karabiner -> /Users/dseely/dev/dotfiles/karabiner
+/Users/dseely/.gitconfig -> /Users/dseely/dev/dotfiles/.gitconfig
+/Users/dseely/.oh-my-zsh -> /Users/dseely/dev/dotfiles/.oh-my-zsh
+/Users/dseely/.p10k.zsh -> /Users/dseely/dev/dotfiles/.p10k.zsh
+/Users/dseely/.zprofile -> /Users/dseely/dev/dotfiles/zsh/.zprofile
+/Users/dseely/.zshrc -> /Users/dseely/dev/dotfiles/zsh/.zshrc
