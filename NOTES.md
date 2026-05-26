@@ -47,6 +47,7 @@ speculatively. Confirmed by Dan, 2026-05-21.
 | `.bash_profile`, `.zshrc-backup-24-jan-2022` | keep as-is, no content review | confirmed 2026-05-22 |
 | `~/.claude/` config in repo | yes — Pass 6 (deferred to end), selective symlinks pattern | confirmed 2026-05-22 |
 | Graveyard pattern (`archived/`) | for files queued for deletion but not yet yanked (honors LOSE-NO-DATA). Move to `archived/<filename>`; deletion happens as a separate operation later. Empty for now. | **confirmed 2026-05-22** |
+| Username portability | **No hardcoded `/Users/<name>/` in any tracked active config.** Use `$HOME` (or `~` where shell-glob-safe). Cross-Mac username drift (`dan` on air, `dseely` on pro) is an irreducible OS-level difference; we eliminate its surface area in dotfiles rather than carry a per-Mac `*.local` for it. **Exceptions**: `manifests/symlinks-<host>.txt` (per-Mac inventories by design); `.zshrc-backup-24-jan-2022` (frozen historical artifact, per existing decision). NOTES.md and README.md may reference example paths but should prefer `$HOME`/`~` in new content. Enforcement: Pass 7 ships `scripts/check-portability.sh` (greps the repo, exits non-zero on hits, optional pre-commit hook). | **confirmed 2026-05-26** |
 
 ## Hosts
 
@@ -70,14 +71,13 @@ speculatively. Confirmed by Dan, 2026-05-21.
 
 ### MacBook-Pro (joined 2026-05-21)
 - Hostname: `D6RX99KXNMAA` (Dan-Seely). Apple Silicon. zsh.
-- Checkout location: `~/dev/dotfiles`. Main is on `align/cleanup` as of
-  2026-05-26 Pass 1 verification (was `snapshot/macbook-pro` during the
-  catch-up window). The `~/dev/dotfiles-align` worktree was removed
-  same day — git refused to share `align/cleanup` across worktrees
-  once main adopted it, and the worktree's insulation job was done.
-  Pro now uses main-checkout-authoring (same as air). Recreate a
-  temporary worktree for Pass 4 (karabiner) if its higher-risk
-  live-test flow wants an isolated copy.
+- Checkout location: `~/dev/dotfiles` (main, on `snapshot/macbook-pro`
+  through Pass 2; advances to `align/cleanup` after Pass 3 lands the
+  cross-Mac username portability fixes). Worktree `~/dev/dotfiles-align`
+  on `align/cleanup` is pro's authoring location for Pass 2 onward.
+  A 2026-05-26 attempt to advance main to `align/cleanup` was rolled
+  back same session — see §Macbook-pro Pass 1 verification —
+  DONE BUT ADVANCE DEFERRED.
 - Uncommitted at project start: M .gitconfig Brewfile
   karabiner/karabiner.json zsh/.zprofile zsh/.zshrc ; untracked .oh-my-zsh/
   fzf/ zed/ zsh/.zshenv karabiner/automatic_backups/karabiner_2024..2025*
@@ -167,28 +167,35 @@ Baton rule (avoid clobbering): the line below names who may edit
 ### BATON history
 
 - 2026-05-26 — macbook-pro took BATON for **Pass 1 verification + pro
-  symlink manifest** (pro-side Pass 1.5 closing). Generated
-  `manifests/symlinks-D6RX99KXNMAADan-Seely.txt` (6 entries —
+  symlink manifest + cross-Mac username portability reframe**
+  (Pass 1.5 pro-side closing). Generated
+  `manifests/symlinks-D6RX99KXNMAADan-Seely.txt` (6 entries:
   karabiner dir, gitconfig, oh-my-zsh, p10k, zprofile, zshrc; no
   `.fzf.zsh` symlink, no Zed symlinks yet). Ran danger check on main
-  (snapshot/macbook-pro → origin/align/cleanup): 21 working-tree
+  (`snapshot/macbook-pro` → `origin/align/cleanup`): 21 working-tree
   deletions, all benign — `fzf/.fzf.{bash,zsh}` (no live symlink),
-  16 `karabiner/automatic_backups/*.json` (historical Karabiner
-  auto-backups under symlinked dir, preserved in snapshot branch),
+  16 `karabiner/automatic_backups/*.json` (historical auto-backups
+  under symlinked dir; preserved in snapshot branch),
   `snapshot/{README.md,stash@0.patch}` (preserved in snapshot branch
-  + local stash@{0}), `zsh/.zshenv` (no `~/.zshenv` on pro at all).
-  Advanced main checkout from `snapshot/macbook-pro` to `align/cleanup`
-  at 47683ca. **Removed the `~/dev/dotfiles-align` worktree** — its
-  job was to insulate live config from pre-verification align/cleanup
-  state; now that main IS align/cleanup, the worktree was a duplicate
-  and git refuses to share a branch across worktrees anyway. Pro
-  adopts the same main-checkout-authoring pattern air has been using;
-  Pass 4 (karabiner) can recreate a temporary worktree at flip time
-  if its higher-risk verification protocol needs it. Smoke-tested
-  post-advance: live `~/.zshrc`, `~/.gitconfig`, `~/.p10k.zsh`,
-  `~/.zprofile` symlinks resolve into the now-on-cleanup repo;
-  karabiner dir symlink resolves; new shell opens clean. Pass 1
-  + Pass 1.5 pro side now ✅. Released BATON → idle in same commit.
+  + local `stash@{0}`), `zsh/.zshenv` (no `~/.zshenv` on pro).
+  **Attempted main-checkout advance to `align/cleanup` (`47683ca`);
+  rolled back same session.** The post-advance smoke test surfaced
+  that `zsh/.zshrc:12` hardcodes `export ZSH="/Users/dan/.oh-my-zsh"`
+  (master/align-cleanup version); pro's home is `/Users/dseely/`, so
+  oh-my-zsh failed to source on `align/cleanup`. Pro's snapshot
+  already carried the `$HOME/.oh-my-zsh` portability fix as a
+  working-tree mod; Pass 3's canonical also lands it. With Dan,
+  reframed this as a recurring class of bug ("cross-Mac username
+  drift") and added the **username-portability decision** (see
+  §Decisions log: no hardcoded `/Users/<name>/` in tracked active
+  config). Pass 2 scope expanded to cover `.bash_profile` +
+  `osx.sh` + `.gitconfig commit.template`. Pass 7 gains a portability
+  lint. Main checkout reverted to `snapshot/macbook-pro` (`9ac1d68`);
+  the `~/dev/dotfiles-align` worktree was recreated for continued
+  align/cleanup authoring. Pro main-checkout advance is **deferred
+  until Pass 3 lands the `$HOME/.oh-my-zsh` + gcloud-path fixes**;
+  the danger-check + manifest portion of Pass 1 verification is ✅.
+  Released BATON → idle in same commit.
 - 2026-05-25 — macbook-air took BATON for **Pass 5 air-side fold-in**
   (later same day as the Pass 7 entry below). Landed `zed/` config in
   repo (new VS-Code-aligned canonical that supersedes the original
@@ -332,22 +339,29 @@ is also fine and matches macbook-pro's pattern.
         Dan confirms iTerm behaves correctly across a few launches.
       - VERIFIED on macbook-air: iTerm launched cleanly post-decouple
         (Dan, 2026-05-20).
-      - VERIFIED on macbook-pro 2026-05-26: danger check clean (see
-        §Macbook-pro Pass 1 verification — DONE), main checkout
-        advanced from `snapshot/macbook-pro` → `align/cleanup`
-        (`47683ca`), live symlinks + new shell smoke-tested clean.
-- [x] **Pass 1.5 — Reality check, scope freeze, pre-flight inventory**
-      (DONE both sides 2026-05-26)
+      - PARTIAL on macbook-pro 2026-05-26: danger check clean (see
+        §Macbook-pro Pass 1 verification — DONE BUT ADVANCE DEFERRED),
+        but **main-checkout advance is deferred** until Pass 3 lands
+        the `$HOME/.oh-my-zsh` + gcloud-path fixes (cross-Mac username
+        drift; see §Decisions log username-portability entry). Main
+        stays on `snapshot/macbook-pro` for now; pro authors future
+        passes from the `~/dev/dotfiles-align` worktree.
+- [~] **Pass 1.5 — Reality check, scope freeze, pre-flight inventory**
+      (manifests + analyses DONE both sides 2026-05-26; pro main-
+      checkout advance deferred to Pass 3 per username-portability)
       - ✅ macbook-air: manifest committed, full diff dive analysis
         for Pass 2-5 in NOTES, secrets scans clean, ALL Dan decisions
         in (Pass 2, Pass 3, Pass 4 rule [1] = disabled, Pass 5 Zed
         dock = right), WIP assessment resolved. Air side fully done.
       - ✅ macbook-pro 2026-05-26: manifest committed
         (`symlinks-D6RX99KXNMAADan-Seely.txt`, 6 entries), Pass 1
-        verification protocol run + green (see §Macbook-pro Pass 1
-        verification — DONE), main checkout advanced to `align/cleanup`.
-        Pass 0 / Pass 1 gitignore / Pass 1.5 analyses all coherent on
-        pro. **Gate cleared — Pass 2 content commits may begin.**
+        danger check run + green. Pass 0 / Pass 1 gitignore /
+        Pass 1.5 analyses all coherent on pro. **Gate cleared —
+        Pass 2 content commits may begin.** Main-checkout advance
+        on pro is deferred to Pass 3 (cross-Mac username drift; see
+        §Decisions log + §Macbook-pro Pass 1 verification — DONE
+        BUT ADVANCE DEFERRED); doesn't block Pass 2 authoring,
+        which proceeds in pro's worktree.
       - **Per-Mac symlink manifest** (LOSE-NO-DATA pre-flight inventory).
         On each Mac:
         ```
@@ -389,16 +403,36 @@ is also fine and matches macbook-pro's pattern.
         `[includeIf "gitdir:~/dev/adadapted/"] path = ~/dev/dotfiles/gitconfig/adadapted`.
         Byte-identical `.gitconfig` on both Macs; inert on machines
         without `~/dev/adadapted/`.
+      - `.gitconfig` portability (per username-portability decision):
+        `[core] excludesfile = /Users/dan/.gitignore_global` →
+        `~/.gitignore_global`; `[commit] template = /Users/dan/.stCommitMsg`
+        → `~/.stCommitMsg`. Both silently no-op on pro today; the fixed
+        form is portable across both Macs even when the referenced files
+        don't exist (git tolerates missing referenced paths).
       - `.zprofile`: brew shellenv. Apple-Silicon `/opt/homebrew` path
         same on both Macs (both are Apple-Silicon per Hosts entries).
       - `.zshenv`: decide adopt (pro's content) / omit / merge.
-      - `Brewfile`: reconcile pro's 3-line diff.
+      - `.bash_profile` portability (per username-portability decision):
+        gcloud `source` lines hardcode `/Users/dan/dev/google-cloud-sdk/`
+        → `$HOME/dev/google-cloud-sdk/`. Pro uses zsh at runtime so
+        this is dead code on pro today, but kept portable per the
+        principle.
+      - `osx.sh` portability (per username-portability decision):
+        `echo '... brew shellenv' >> /Users/dan/.zprofile` →
+        `>> "$HOME/.zprofile"`. Setup-time script only; still gets
+        the fix.
+      - `Brewfile`: reconcile pro's 3-line diff. Plus the Pass 5
+        addendum: add `cask "zed"` so both Macs converge on
+        cask-managed Zed (see §Pass 5 air-side completion → Brewfile
+        note).
       - `README.md` whitespace.
       - VERIFICATION GATE: receiving Mac → worktree pull → danger
         check → main pull → both Macs confirm `git -C ~/dev/adadapted
         config user.email` returns work email, `git -C ~/anywhere-else
         config user.email` returns personal email, shells open clean,
-        `brew bundle check` passes.
+        `brew bundle check` passes. **Pro's main-checkout advance still
+        deferred until Pass 3** — Pass 2 verification on pro happens
+        in the worktree; main stays on `snapshot/macbook-pro`.
 - [ ] **Pass 3 — `.zshrc` + `.p10k.zsh`** (medium-risk: shell startup)
       - 107-line `.zshrc` divergence per Mac vs master. Per-block
         canonical decisions: pyenv init flag, plugin list,
@@ -465,8 +499,17 @@ is also fine and matches macbook-pro's pattern.
         [[pass5-zed-vscode-align]]).
       - Treat README as a LIVING doc: refresh it as each pass lands so it
         never drifts again; do a final accuracy pass at merge time.
+      - **Portability lint** (per username-portability decision):
+        ship `scripts/check-portability.sh` that greps the repo for
+        `/Users/dan/` and `/Users/dseely/`, skipping the documented
+        exceptions (`manifests/`, `.zshrc-backup-24-jan-2022`,
+        `archived/`, `snapshot/`, plus NOTES/README which may carry
+        example paths). Exits non-zero on hits. Optionally wired as
+        a pre-commit hook via `.git/hooks/pre-commit` or
+        `core.hooksPath`. Run it as a project-end gate before the
+        single merge to master.
       - VERIFICATION GATE: README's documented symlinks/steps match reality
-        on BOTH Macs.
+        on BOTH Macs; portability lint exits 0 on both Macs.
 - [ ] **Final — Merge `align/cleanup` → `master`** in one commit,
       after all passes verified green on both Macs.
       - Delete `snapshot/macbook-air`, `snapshot/macbook-pro`.
@@ -475,7 +518,7 @@ is also fine and matches macbook-pro's pattern.
         or delete with NOTES.
       - Tag known-good state (e.g., `aligned-2026-05`).
 
-## Pass 1.5 analysis (air-side DONE 2026-05-23; pro-side pending)
+## Pass 1.5 analysis (air-side DONE 2026-05-23; pro-side DONE 2026-05-26 with main-advance deferred to Pass 3)
 
 ### Symlink manifest — macbook-air (7 entries)
 
@@ -1118,7 +1161,7 @@ Pass 2 onwards will commit the **proposed canonical** (synthesized
 from both Macs' analyses) onto `align/cleanup`, not commit air's
 WIP mods as-is.
 
-### Macbook-pro Pass 1 verification — DONE 2026-05-26
+### Macbook-pro Pass 1 verification — DONE BUT ADVANCE DEFERRED 2026-05-26
 
 **Manifest generated** at `manifests/symlinks-D6RX99KXNMAADan-Seely.txt`
 (6 entries — produced by the documented `find` + `sort` heredoc with
@@ -1161,37 +1204,69 @@ at `9ac1d68`): 21 deletions, all benign after manifest cross-ref:
   symlink). Pass 2 will reintroduce a `[ -f ]`-guarded version and
   set up the symlink then.
 
-**Main checkout advanced** from `snapshot/macbook-pro` (`9ac1d68`) to
-`align/cleanup` (`47683ca`) via direct checkout (not `git pull
---ff-only` — those two branches diverge by construction; FF-only
-applies to subsequent updates to `align/cleanup`). Required removing
-the `~/dev/dotfiles-align` worktree first since git refuses to share
-a branch across worktrees.
+**Main checkout advance — ATTEMPTED, ROLLED BACK** 2026-05-26. To
+attempt the advance, removed the `~/dev/dotfiles-align` worktree
+(git refuses to share `align/cleanup` across worktrees), then
+`git checkout align/cleanup` in main. Direct checkout (not
+`git pull --ff-only`) because `snapshot/macbook-pro` and
+`align/cleanup` diverge by construction.
 
-**Worktree removed.** Its purpose was insulating live config from
-pre-verification align/cleanup state during pro's catch-up window.
-That window is closed. Pro now uses the same main-checkout-authoring
-pattern air uses. The Pass 4 (karabiner) verification protocol can
-recreate a temporary worktree at flip time if its higher-risk live
-test needs an isolated copy — easy to redo with
-`git worktree add ~/dev/dotfiles-align align/cleanup`.
+**Smoke test post-advance flagged a regression:**
 
-**Smoke test post-advance** (2026-05-26):
-- `git status` clean on tracked content (only expected untracked:
-  `.DS_Store`, `.claude/`, `.oh-my-zsh/`, `fzf/.DS_Store`,
-  `zed/embeddings/`, all gitignored or local-state).
-- All 6 in-repo symlinks resolve correctly: `~/.zshrc`,
-  `~/.gitconfig`, `~/.p10k.zsh`, `~/.zprofile`, `~/.oh-my-zsh`,
-  `~/.config/karabiner` all `readlink` into `~/dev/dotfiles/...`.
-- `zsh -l -i -c 'echo OK'` prints `OK` and exits 0 (one cosmetic
-  p10k gitstatus notice — common in short-lived non-interactive
-  subshells, not a regression).
-- `~/.config/karabiner/karabiner.json` reachable via dir symlink
-  (35877 bytes, unchanged from snapshot — same content in
-  align/cleanup, Pass 4 hasn't touched it yet).
+```
+$ zsh -l -i -c 'echo OK'
+/Users/dseely/.zshrc:source:95: no such file or directory: /Users/dan/.oh-my-zsh/oh-my-zsh.sh
+OK
+```
 
-Pass 1 verification gap **closed**. Pass 2 content commits can begin
-on next BATON cycle.
+`zsh/.zshrc:12` (master/align-cleanup version) hardcodes
+`export ZSH="/Users/dan/.oh-my-zsh"`. Pro's home is `/Users/dseely/`,
+so `source $ZSH/oh-my-zsh.sh` at line 95 fails. Shell still exits
+0 (source failure is non-fatal), but oh-my-zsh doesn't load — no
+p10k prompt, no plugins, no aliases on every new pro terminal.
+
+Pro's snapshot already carries the `$HOME/.oh-my-zsh` portability
+fix as a working-tree mod; Pass 3's canonical also lands it (see
+§Diff dive — Pass 3 scope, item 2). Air doesn't see the regression
+because air's user IS `dan`, so the hardcoded path resolves there.
+
+**Reframed and rolled back.** Dan: this is a recurring class
+("cross-Mac username drift"), not a one-off `.zshrc` bug. Added
+the username-portability decision (no hardcoded `/Users/<name>/` in
+tracked active config — see §Decisions log). Pass 2 + Pass 7 scope
+expanded. Reverted main to `snapshot/macbook-pro` (`9ac1d68`) and
+recreated the `~/dev/dotfiles-align` worktree on `align/cleanup`
+(0b5280b). Pro stays in worktree-authoring pattern.
+
+**Audit** (tracked active config with hardcoded `/Users/<name>/`,
+excluding `manifests/`, `.zshrc-backup-24-jan-2022`, snapshot
+branches, NOTES/README which are docs):
+
+| File | Lines | Active impact on pro |
+|---|---|---|
+| `zsh/.zshrc:12` | `export ZSH="/Users/dan/.oh-my-zsh"` | **breaks oh-my-zsh load** (Pass 3 fixes) |
+| `zsh/.zshrc:159,162` | gcloud `source` lines | silently no-op (gcloud at `/Users/dseely/google-cloud-sdk/`; Pass 3 → `$HOME/`) |
+| `zsh/.zshrc:141,145` | commented gcloud (bash) | inert |
+| `.gitconfig:24` | `excludesfile = /Users/dan/.gitignore_global` | silently no-op (Pass 2 → `~/`) |
+| `.gitconfig:39` | `template = /Users/dan/.stCommitMsg` | silently no-op (Pass 2 ADDS this fix) |
+| `.bash_profile:104,107` | gcloud bash sourcing | pro uses zsh — irrelevant runtime, but Pass 2 ADDS the fix per portability principle |
+| `osx.sh:11` | `>> /Users/dan/.zprofile` | setup script only; Pass 2 ADDS the fix |
+
+**What's verified vs deferred on pro:**
+
+| Step | Status |
+|---|---|
+| Pro symlink manifest committed | ✅ |
+| Danger check (deletions × manifest) | ✅ clean |
+| Main checkout advance to `align/cleanup` | ⏸️ deferred to post-Pass-3 |
+| Smoke test on advanced state | ⏸️ deferred |
+| Pass 2+ authoring (in pro worktree) | ✅ unblocked |
+
+Pass 1 verification gap **partially closed** (danger check + manifest
+done; advance deferred). Pass 2 content commits can begin on next
+BATON cycle; pro authors them from the recreated worktree until Pass
+3 lands the portability fixes that unblock pro's main-checkout
+advance.
 
 ## Resolved side-issues (do not re-investigate)
 
