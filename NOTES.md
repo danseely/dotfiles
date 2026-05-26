@@ -171,6 +171,25 @@ Baton rule (avoid clobbering): the line below names who may edit
 
 ### BATON history
 
+- 2026-05-26 — macbook-pro took BATON for **Pass 3 authoring**
+  (canonical `zsh/.zshrc`; `.p10k.zsh` unchanged — byte-identical
+  across all three refs). Authored in pro worktree; pro main
+  untouched per Dan's "author + worktree pre-flight only" choice.
+  Layered air's `history-substring-search` plugin + `codex-inline`
+  alias onto pro's snapshot base; converted `/Users/dseely/google-cloud-sdk/`
+  → `"$HOME/google-cloud-sdk/"`; dropped Antigravity PATH, the
+  commented `# BROKEN ???` bash-style gcloud sources (`/Users/dan/`
+  references that would fail the portability lint), the rbenv
+  commented init, and the `# or this?` poetry noise. Functional
+  pre-flight via `ZDOTDIR=~/dev/dotfiles-align/zsh zsh -l -i`:
+  shell starts clean, `$ZSH` resolves to `/Users/dseely/.oh-my-zsh`,
+  oh-my-zsh + history-substring-search + git + theme + codex-inline
+  all load correctly ✅ — exactly closes the breakage that aborted
+  the 2026-05-26 Pass 1 advance attempt. Live `theme()` smoke test
+  on pro deferred until pro main advances (needs live iTerm TTY).
+  Air-side verification of Pass 2 + Pass 3 combined is left for
+  air's next session (full scope documented in §Pass 3 authored).
+  Released BATON → idle in same commit.
 - 2026-05-26 — macbook-pro took BATON for **Pass 2 authoring**
   (content commits, all 5 originally-scoped files + the 3
   username-portability files). Authored in pro worktree
@@ -527,7 +546,9 @@ shell (worked example: 2026-05-26 attempt + rollback).
         `brew bundle check` passes. **Pro's main-checkout advance still
         deferred until Pass 3** — Pass 2 verification on pro happens
         in the worktree; main stays on `snapshot/macbook-pro`.
-- [ ] **Pass 3 — `.zshrc` + `.p10k.zsh`** (medium-risk: shell startup)
+- [~] **Pass 3 — `.zshrc` + `.p10k.zsh`** (authored 2026-05-26 in pro
+      worktree; air-side verification + main-advance + live `theme()`
+      test on pro all still pending — see §Pass 3 authored below)
       - 107-line `.zshrc` divergence per Mac vs master. Per-block
         canonical decisions: pyenv init flag, plugin list,
         `codex-inline` alias, `theme()` function (depends on Pass 0's
@@ -1051,6 +1072,92 @@ written in Pass 3 itself):
 **Secrets scan — `.zshrc`**: no tokens, no inline passwords, no
 auth URLs. Comment references to `aws-auth.sh` are an external script
 that handles MFA — script isn't in repo. ✓ clean.
+
+### Pass 3 authored — DONE 2026-05-26 (in pro worktree)
+
+`zsh/.zshrc` canonical landed on `align/cleanup`. `.p10k.zsh` is
+byte-identical across master/pro snapshot/air snapshot (md5
+`cdbd989b...`) — no change required.
+
+**Authoring base**: pro's snapshot `.zshrc` (closest to canonical
+shape) with these layered changes:
+
+| Change | Source | Why |
+|---|---|---|
+| Add `history-substring-search` to plugins | air's diff | adopt air's plugin add |
+| Add `alias codex-inline='command codex --no-alt-screen'` | air's diff | adopt air's alias |
+| `[ -f '/Users/dseely/google-cloud-sdk/...'] → "$HOME/google-cloud-sdk/..."` | username-portability decision | portable across both Macs |
+| Drop `# Added by Antigravity` + `export PATH="/Users/dseely/.antigravity/..."` | Pass 3 analysis item 9 | dead PATH; user-specific install not dotfiles' job |
+| Drop `# eval "$(rbenv init - zsh)"` (commented) | Pass 3 analysis item 7 | inactive cruft |
+| Drop `# BROKEN ???` commented bash-style gcloud sources with `/Users/dan/` | username-portability | dead code AND would fail portability lint |
+| Drop `# or this?` commented poetry alternative | Pass 3 analysis item 4 | noise |
+
+**Kept verbatim from pro snapshot** (the portability fixes and modern
+additions): VS Code/Cursor agent guard at top, `$HOME/.oh-my-zsh`,
+dual pyenv-init form (both `--path` and `-` evals), iTerm2 shell
+integration guarded source, NVM manual lazy-load, full `theme()`
+function. Per Pass 3 decision (b), gcloud sources placed AFTER
+LDFLAGS/CPPFLAGS (pro's placement). Per Pass 3 decision (a), the
+2023-era LDFLAGS/CPPFLAGS/PHP 7.4 PATH lines stay as-is — a separate
+later cleanup will decide.
+
+**Functional regression pre-flight** (per §Hardened verification
+protocol step 3) — `ZDOTDIR=~/dev/dotfiles-align/zsh zsh -l -i`:
+
+| Probe | Result |
+|---|---|
+| Shell start (non-zero exit / source errors) | ✅ clean exit, no errors |
+| `$ZSH` after load | `/Users/dseely/.oh-my-zsh` (= `$HOME/.oh-my-zsh`) ✅ |
+| `omz` function defined | yes — oh-my-zsh sourced ✅ |
+| `git` resolves | `/usr/bin/git` ✅ |
+| `history-substring-search-up` plugin function | defined ✅ (new plugin) |
+| `codex-inline` alias | `'command codex --no-alt-screen'` ✅ (new alias) |
+| `theme` function | defined ✅ |
+| Portability lint on `zsh/.zshrc` | 0 hits ✅ |
+
+**This proves the pre-Pass-1-rollback breakage is fixed**: when
+this `.zshrc` is sourced under pro's `$HOME=/Users/dseely/`, the
+`export ZSH="$HOME/.oh-my-zsh"` resolves correctly and oh-my-zsh
+loads — exactly what failed on 2026-05-26's first advance attempt.
+
+**Pro main-advance is now technically unblocked** but explicitly
+deferred this session per Dan's choice ("Author + worktree pre-flight
+only"). When pro does advance:
+1. Pull `align/cleanup` into worktree (already there).
+2. Re-run danger check (deletions) + re-confirm pre-flight (above).
+3. `git checkout align/cleanup` in main.
+4. Live smoke test: open a fresh iTerm pane, confirm p10k prompt
+   renders, run `theme lavender` then `theme off` to exercise the
+   `theme()` function against the live Dynamic Profiles installed in
+   Pass 0 pro Phase 1.
+
+**Live `theme()` test — DEFERRED.** Requires pro's main on
+`align/cleanup` AND a TTY-attached iTerm session (the OSC fast-path
+needs `[[ -t 1 ]]` true; agent shells without a TTY would fall back
+to the Python iTerm2 API which needs `$ITERM_SESSION_ID`).
+
+**Air-side scope when air picks up BATON next:**
+1. Pull combined Pass 2 + Pass 3 from `align/cleanup`.
+2. Danger check against air's manifest (`symlinks-MacBook-Air.txt`,
+   7 entries — should be clean: only Pass 0 dynamic profile + tracked
+   content; nothing structural touched on air's symlinked dirs).
+3. Functional pre-flight on `.zshrc` (`ZDOTDIR=...` on air's worktree)
+   — verifies the canonical works under air's `$HOME=/Users/dan/` too.
+   `theme()` function will be defined but cannot be invoked on air
+   yet (air's DynamicProfiles symlink is Pass 0 Phase 2, deferred to
+   post-merge).
+4. Selective live test (.zshrc): `ln -sf
+   ~/dev/dotfiles-align/zsh/.zshrc ~/.zshrc; zsh -l -i -c true;
+   revert if errors`. Air's authoring-mac vs receiving-mac choice;
+   per air's pattern it's also fine to skip the selective live test
+   and trust the worktree pre-flight + danger check.
+5. Advance air's main checkout.
+6. Smoke test live shell on air.
+
+**`.p10k.zsh`**: no canonical change; both Macs already byte-identical.
+Verification step is just "confirm `~/.p10k.zsh` still resolves" —
+since both Macs already have the live symlink and content didn't
+change, this is implicit in step 6 above.
 
 ### Diff dive — Pass 4 scope: `karabiner/karabiner.json` (2026-05-22)
 

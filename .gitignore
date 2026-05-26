@@ -11,3 +11,7 @@ karabiner/automatic_backups/
 
 # Claude Code project-local settings (per-machine permissions/state)
 .claude/*.local.json
+
+# zsh compinit cache files — hostname-suffixed, regenerated on each shell
+# start. They appear in zsh/ when verifying via ZDOTDIR=zsh/.
+zsh/.zcompdump*
