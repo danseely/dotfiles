@@ -11,3 +11,8 @@ export GPG_TTY=$(tty)
 
 # Homebrew
 eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# Cargo / rustup — login shells only (scripts via `zsh -c` don't need cargo
+# on PATH). Guard for fresh-clone safety: file may not exist before rustup
+# runs on a new machine.
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"

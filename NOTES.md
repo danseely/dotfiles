@@ -46,7 +46,7 @@ speculatively. Confirmed by Dan, 2026-05-21.
 | Keep `.zshrc-backup-24-jan-2022` | yes | set |
 | iTerm plist handling | Curated export only (Pass 0 design below) | set |
 | Merge cadence | one merge `align/cleanup` → `master` at project end (master = clean rollback target throughout) | **confirmed 2026-05-22** |
-| `.gitconfig` identity | global `dan@danseely.net`; `includeIf "gitdir:~/dev/adadapted/"` overrides to `dseely@adadapted.com` via repo-internal `gitconfig/adadapted` (referenced as `path = ~/dev/dotfiles/gitconfig/adadapted`). Byte-identical `.gitconfig` ships on both Macs; inert on machines without `~/dev/adadapted/`. | **confirmed 2026-05-22** |
+| `.gitconfig` identity | global `dan@danseely.net`; `includeIf "gitdir/i:~/dev/adadapted/"` (case-insensitive, post-review hardening) overrides to `dseely@adadapted.com` via repo-internal `gitconfig/adadapted` (referenced as `path = ~/dev/dotfiles/gitconfig/adadapted`). Byte-identical `.gitconfig` ships on both Macs; inert on machines without `~/dev/adadapted/`. | **decided 2026-05-22, implemented 2026-05-26 in Pass 2 (gitdir/i: hardening added post-review 2026-05-26)** |
 | Verification protocol | receiving Mac pulls into worktree first, runs danger check (deleted-files × symlink manifest), optionally tests selective symlinks, only then advances main checkout | **confirmed 2026-05-22** |
 | Symlink manifest | per-Mac `manifests/symlinks-<host>.txt` committed to repo as LOSE-NO-DATA pre-flight inventory of symlinks-into-repo | **confirmed 2026-05-22** |
 | `.bash_profile`, `.zshrc-backup-24-jan-2022` | keep as-is, no content review | confirmed 2026-05-22 |
@@ -171,6 +171,30 @@ Baton rule (avoid clobbering): the line below names who may edit
 
 ### BATON history
 
+- 2026-05-26 — macbook-pro took BATON for **Pass 3 post-review
+  revision** (follow-on to today's adversarial review of Pass 2 +
+  Pass 3). Findings landed inline rather than deferred. BLOCKER fix:
+  `.zshrc` pyenv init now guarded by `command -v pyenv` so a fresh
+  machine without pyenv doesn't crash on shell start. HIGH fixes:
+  quoted PYENV_ROOT check, `bindkey` for history-substring-search
+  (plugin was loaded-but-dead without it), dropped Intel-Homebrew
+  `/usr/local/(s)bin` PATH-prepends from `.zshrc` head, moved iTerm2
+  shell integration before `.p10k.zsh` source, trimmed dead Intel
+  cruft (LDFLAGS, CPPFLAGS, PHP 7.4 PATH, vagrant alias — reverses
+  Pass 3 decision (a)). Other accepted findings: deleted `zsh/.zshenv`
+  and moved cargo env source to `.zprofile` (login-shells only);
+  `.gitconfig` credential helper drops hardcoded `/opt/homebrew/bin/gh`
+  in favor of PATH-resolved `gh`; `.gitconfig` includeIf hardened to
+  `gitdir/i:` for case-insensitive matching. Protocol additions:
+  §Hardened verification protocol step 3 probe set hardened to assert
+  bindkey + hooks + integration + cruft-absence (and use `env -i` to
+  avoid parent-env regressions hiding); new step 5 requires re-running
+  the danger check immediately before any main-advance. Decisions log
+  `.gitconfig` row dated 2026-05-22 → updated to reflect actual
+  implementation date. Pass 1 checkbox `[x]` → `[~]` since main-
+  advance is deferred. Post-review pre-flight green across the
+  full hardened probe set (see §Pass 3 post-review revision — DONE).
+  Released BATON → idle in same commit.
 - 2026-05-26 — macbook-pro took BATON for **Pass 3 authoring**
   (canonical `zsh/.zshrc`; `.p10k.zsh` unchanged — byte-identical
   across all three refs). Authored in pro worktree; pro main
@@ -336,15 +360,54 @@ verified). Apply for every pass that touches tracked file content:
    functional smoke test against the worktree as a stand-in for live
    state. The deletions-only danger check (step 2) does NOT catch
    content modifications to files reached through symlinks — but
-   those modifications can still break live config. Examples:
-   - Shell-affecting passes: source the worktree `.zshrc` in a
-     subshell — `ZDOTDIR=~/dev/dotfiles-align/zsh zsh -l -i -c
-     'echo OK; type omz; type git'` — to test the worktree's
-     `.zshrc` without symlinking it live. Watch for any
-     `no such file` / `command not found` / hardcoded-path errors.
-   - Pass 2 portability: confirm `git -C ~/dev/adadapted config
-     user.email` resolves correctly against the worktree's
-     `.gitconfig` via `GIT_CONFIG_GLOBAL=~/dev/dotfiles-align/.gitconfig`.
+   those modifications can still break live config.
+
+   **Required probe set for shell-affecting passes** (post-2026-05-26
+   review hardening — the original probe set missed a dead-plugin
+   bug because it only checked "function defined", not "keys bound"):
+
+   ```
+   env -i HOME="$HOME" PATH="/usr/bin:/bin" TERM="$TERM" \
+     ZDOTDIR=~/dev/dotfiles-align/zsh zsh -l -i -c '
+       echo OK
+       echo "ZSH=$ZSH"
+       type omz                                # oh-my-zsh sourced
+       type git                                # PATH resolves
+       # Per-plugin assertions — defined function AND key/hook binding:
+       type history-substring-search-up
+       bindkey "^[[A" | grep history-substring  # NOT just function-defined
+       type iterm2_set_user_var                # shell integration loaded
+       (( ${#precmd_functions} > 0 ))          # hook chain populated
+       echo "no LDFLAGS leak: ${LDFLAGS-unset}" # no dead-cruft re-leak
+       alias vvs 2>&1 | head -1                # confirm trimmed
+   '
+   ```
+
+   `env -i` is critical: without it the inner shell inherits env vars
+   set by the parent's *previous* `.zshrc` (the one with the old
+   content), masking regressions. The 2026-05-26 review caught
+   `LDFLAGS` "still set" — actually a parent-env leak; the clean-env
+   form eliminates the ambiguity.
+
+   **Required probe set for `.gitconfig` passes**:
+
+   ```
+   ln -sfn ~/dev/dotfiles-align/gitconfig ~/dev/dotfiles/gitconfig  # workaround until main advances
+   mkdir -p ~/dev/AdAdapted/case-test && cd $_ && git init -q
+   GIT_CONFIG_GLOBAL=~/dev/dotfiles-align/.gitconfig git config user.email
+   #   → dseely@adadapted.com (work email; mixed-case dir tests gitdir/i:)
+   cd /tmp && mkdir outside-test && cd $_ && git init -q
+   GIT_CONFIG_GLOBAL=~/dev/dotfiles-align/.gitconfig git config user.email
+   #   → dan@danseely.net (personal)
+   cd / && rm -rf ~/dev/AdAdapted /tmp/outside-test ~/dev/dotfiles/gitconfig
+   ```
+
+   The `~/dev/dotfiles/gitconfig` symlink workaround is required
+   because the includeIf `path` references the LIVE checkout path, not
+   the worktree. Pro's main on `snapshot/macbook-pro` doesn't have
+   the `gitconfig/` subdir until main advances; the symlink fakes it
+   for the pre-flight only.
+
    - Pass 0 / iTerm: launch iTerm WITHOUT the symlinked profile and
      confirm core behavior; only then symlink the curated profile in.
 
@@ -359,9 +422,14 @@ verified). Apply for every pass that touches tracked file content:
    file, exercise behavior, revert symlink if broken. Examples:
    - `.zshrc`: `ln -sf ~/dev/dotfiles-align/zsh/.zshrc ~/.zshrc; zsh -l -i -c true; <revert if errors>`
    - `karabiner.json`: `ln -sf ~/dev/dotfiles-align/karabiner/karabiner.json ~/.config/karabiner/karabiner.json` (karabiner auto-reloads); revert if remap behavior broken.
-5. **Advance main checkout**: in main, `git pull --ff-only origin align/cleanup`.
-6. **Smoke test** the pass-specific behavior in main; mark verified in NOTES.
-7. **Rollback if needed**: `git checkout snapshot/<host>` restores all
+5. **Re-run danger check (step 2) immediately before advance**. If new
+   passes have landed on `align/cleanup` since the original step-2
+   check, the deletion list may have grown. Re-running protects
+   against new files touching symlinked-into-repo targets that
+   weren't in scope when step 2 first ran.
+6. **Advance main checkout**: in main, `git pull --ff-only origin align/cleanup`.
+7. **Smoke test** the pass-specific behavior in main; mark verified in NOTES.
+8. **Rollback if needed**: `git checkout snapshot/<host>` restores all
    repo content to pre-cleanup state. Symlinks in `~` are untouched
    throughout — only the *content at their targets* changes, which
    reverts with the checkout.
@@ -435,7 +503,7 @@ shell (worked example: 2026-05-26 attempt + rollback).
         first. `snapshot/<otherhost>` also preserves its raw plist.
       - Do iTerm prefs surgery with **iTerm fully quit**, driven from
         Terminal.app/Warp via `defaults write` (no GUI, no race).
-- [x] **Pass 1 — Hygiene** — DONE on branch `align/cleanup`,
+- [~] **Pass 1 — Hygiene** — content DONE on `align/cleanup`,
       commit `d9da728` (pushed, master untouched).
       - iTerm decoupled from repo: backup at
         `~/iterm-prefs-backup-20260519.plist`; rich 8-profile config
@@ -1058,9 +1126,15 @@ written in Pass 3 itself):
 16. **rbenv commented line**: dropped.
 17. **gcloud paths**: `$HOME/` not `/Users/dan/` or `/Users/dseely/`.
 
-**Pass 3 decisions — APPROVED (Dan, 2026-05-22)**:
-- a) **Keep all 2023-era stale lines as-is** in canonical `.zshrc`.
-  Deal with archive/remove later (separate cleanup pass after merge).
+**Pass 3 decisions — APPROVED (Dan, 2026-05-22; decision (a) REVERSED 2026-05-26 post-review)**:
+- a) ~~Keep all 2023-era stale lines as-is in canonical `.zshrc`.~~
+  **REVERSED 2026-05-26 post-adversarial-review**: trim now.
+  The lines were live `export`s of nonexistent paths (Intel-Homebrew
+  `/usr/local/opt/zlib/...` LDFLAGS + CPPFLAGS + PHP 7.4 PATH; plus
+  `alias vvs='vagrant ssh'` for a deleted Brewfile dependency). PATH
+  entries to nonexistent dirs are harmless at runtime but the lines
+  fail the spirit of an aligned canonical and would fail an extended
+  portability lint. Trimmed in the Pass 3 post-review revision commit.
 - b) **gcloud source placement: pro's** (after LDFLAGS/CPPFLAGS).
 - c) **Install dynamic profiles on air in Pass 3.** `theme()` works
   on both Macs after Pass 3 lands. Implementation: symlink
@@ -1158,6 +1232,85 @@ to the Python iTerm2 API which needs `$ITERM_SESSION_ID`).
 Verification step is just "confirm `~/.p10k.zsh` still resolves" —
 since both Macs already have the live symlink and content didn't
 change, this is implicit in step 6 above.
+
+### Pass 3 post-review revision — DONE 2026-05-26
+
+An adversarial review of Pass 2 + Pass 3 (run from pro after the
+initial commits landed) surfaced findings worth fixing inline rather
+than deferring. All accepted findings applied as a follow-on commit
+on `align/cleanup`. Highlights:
+
+**BLOCKER fix** — `.zshrc` pyenv guard. Original code ran
+`eval "$(pyenv init -)"` unconditionally; if pyenv isn't installed
+this crashes the shell (the same failure-mode class as the Pass 1
+advance regression). Now wrapped in `command -v pyenv >/dev/null
+2>&1 && { eval ...; eval ...; }`.
+
+**HIGH fixes** — also `.zshrc`:
+- `[[ -d $PYENV_ROOT/bin ]]` quoted: `[[ -n "$PYENV_ROOT" && -d
+  "$PYENV_ROOT/bin" ]]` (avoids bare `/bin` insertion if PYENV_ROOT
+  ever unset).
+- `bindkey '^[[A' history-substring-search-up` + `'^[[B'` down
+  added after `source $ZSH/oh-my-zsh.sh`. Without these, the plugin
+  is loaded but dead — original pre-flight only checked function
+  defined, missed the missing key binding.
+- Dropped `/usr/local/(s)bin` PATH-prepends from `.zshrc` head
+  exports. They placed Intel-Homebrew ahead of `/opt/homebrew/bin`
+  on Apple Silicon, shadowing arm64 binaries.
+- iTerm2 shell integration source moved **before** the `.p10k.zsh`
+  source — per iTerm2's documented requirement (precmd/preexec hook
+  ordering vs p10k's prompt init).
+- Trimmed dead Intel-era cruft (decision (a) reversed): removed
+  `LDFLAGS=-L/usr/local/opt/zlib/...`, `CPPFLAGS=-I/usr/local/opt/...`,
+  `/usr/local/opt/php@7.4/{bin,sbin}` PATH exports, and
+  `alias vvs='vagrant ssh'` (Brewfile no longer ships vagrant).
+
+**Other changes**:
+- `zsh/.zshenv` deleted; cargo env source moved to `zsh/.zprofile`
+  (login-shell-only — avoids running for every `zsh -c` script).
+- `.gitconfig` credential helper: dropped hardcoded
+  `/opt/homebrew/bin/gh` prefix — `gh` resolves via PATH on either
+  Intel or Apple Silicon. Future-proof.
+- `.gitconfig` includeIf: `gitdir:` → `gitdir/i:` (case-insensitive).
+  Resilient against `~/dev/AdAdapted/` or other case variants.
+
+**Protocol additions** (in §Hardened verification protocol):
+- Step 3 probe set hardened: explicit `bindkey` assertion for new
+  plugins, `precmd_functions` count, iTerm integration function
+  defined, `LDFLAGS` leak check, vagrant alias absence. Plus `env -i`
+  to avoid parent-env inheritance hiding regressions.
+- Step 3 `.gitconfig` includeIf probe documented including the
+  `~/dev/dotfiles/gitconfig` symlink workaround needed until pro main
+  advances.
+- New step 5: re-run danger check (step 2) immediately before
+  advance. Catches new pass-content deletions that joined since the
+  original step 2.
+
+**Post-review pre-flight re-run** (with hardened probes,
+`env -i`-isolated): all probes green:
+
+| Probe | Result |
+|---|---|
+| Shell start | ✅ OK, no errors |
+| `bindkey "^[[A"` | `history-substring-search-up` ✅ (was missing) |
+| `bindkey "^[[B"` | `history-substring-search-down` ✅ |
+| `iterm2_set_user_var` defined | ✅ (integration loaded) |
+| `precmd_functions` count | 9 ✅ |
+| `preexec_functions` count | 4 ✅ |
+| `LDFLAGS` after isolated load | `(unset)` ✅ (cruft trimmed) |
+| `vvs` alias | not defined ✅ (cruft trimmed) |
+| PHP 7.4 in PATH | 0 hits ✅ |
+| `.gitconfig` case-insensitive (mixed-case `~/dev/AdAdapted/`) | resolves to `dseely@adadapted.com` ✅ |
+| `.gitconfig` outside | resolves to `dan@danseely.net` ✅ |
+| `gh` portability (no hardcoded path) | resolves via PATH to `/opt/homebrew/bin/gh` ✅ |
+| Portability lint on 7 authored files | 0 hits ✅ |
+
+**Items NOT addressed** (intentional or low priority):
+- NVM eager source kept; comment relabeled "eager" (was misleading
+  "lazy") — air's drop of zsh-nvm was deliberate per Pass 3 analysis.
+- `osx.sh` `/usr/bin/ruby` legacy Homebrew installer → Pass 7 sweep.
+- Brewfile `cask 'zed'` vs Zed's self-updater contention → noted; not
+  changed this session.
 
 ### Diff dive — Pass 4 scope: `karabiner/karabiner.json` (2026-05-22)
 

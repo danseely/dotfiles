@@ -19,20 +19,22 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
 fi
 
 # If you come from bash you might have to change your $PATH.
-export PATH=$HOME/bin:/usr/local/bin:$PATH
-export PATH="/usr/local/sbin:$PATH"
+# Note: /opt/homebrew/{bin,sbin} are prepended by .zprofile via brew shellenv;
+# do NOT re-add /usr/local/(s)bin here — that puts Intel Homebrew ahead on
+# Apple Silicon and shadows arm64 binaries.
+export PATH="$HOME/bin:$PATH"
+
 # Path to your oh-my-zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
 
-# pyenv
-# export PATH="$HOME/.pyenv/bin:$PATH"
-# export PATH="/usr/local/bin:$PATH"
+# pyenv — guard the init evals so a machine without pyenv installed doesn't
+# blow up the shell (e.g., the Pass 1 advance regression mode).
 export PYENV_ROOT="$HOME/.pyenv"
-# command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
-[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init --path)"
-# eval "$(pyenv init)"
-eval "$(pyenv init -)"
+[[ -n "$PYENV_ROOT" && -d "$PYENV_ROOT/bin" ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+if command -v pyenv >/dev/null 2>&1; then
+  eval "$(pyenv init --path)"
+  eval "$(pyenv init -)"
+fi
 
 # poetry
 export PATH="$HOME/.local/bin:$PATH"
@@ -113,6 +115,11 @@ source $ZSH/oh-my-zsh.sh
 fpath=(~/.zsh $fpath)
 zstyle ':completion:*:*:git:*' script ~/.git-completion.bash
 
+# history-substring-search keybindings — plugin must be loaded (above) before
+# these bindkey calls. Without bindkey the plugin is dead weight.
+bindkey '^[[A' history-substring-search-up
+bindkey '^[[B' history-substring-search-down
+
 # User configuration
 
 # export MANPATH="/usr/local/man:$MANPATH"
@@ -139,7 +146,6 @@ zstyle ':completion:*:*:git:*' script ~/.git-completion.bash
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 alias vim="nvim"
-alias vvs="vagrant ssh"
 
 # Codex CLI: inline mode (no alt-screen) so iTerm2 scrollback retains history.
 alias codex-inline='command codex --no-alt-screen'
@@ -155,6 +161,11 @@ alias gitprune='git branch --merged | egrep -v "(^\*|master|dev)" | xargs git br
 # use newer fork of youtube-dl
 # alias youtube-dl="yt-dlp"
 
+# iTerm2 shell integration — must be sourced BEFORE p10k so its precmd/preexec
+# hooks register before p10k's prompt initialization. iTerm's installer
+# documents this requirement explicitly.
+test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
+
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
@@ -166,26 +177,18 @@ export GPG_TTY=$TTY
 # random
 alias weather="curl http://wttr.in"
 
-# DEGBUGGING: let compilers find Homebrew's zlib
-# export PKG_CONFIG_PATH="/usr/local/opt/zlib/lib/pkgconfig"
-#
-
-export LDFLAGS="-L/usr/local/opt/zlib/lib -L/usr/local/opt/bzip2/lib"
-export CPPFLAGS="-I/usr/local/opt/zlib/include -I/usr/local/opt/bzip2/include"
-export PATH="/usr/local/opt/php@7.4/bin:$PATH"
-export PATH="/usr/local/opt/php@7.4/sbin:$PATH"
-
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f "$HOME/google-cloud-sdk/path.zsh.inc" ]; then . "$HOME/google-cloud-sdk/path.zsh.inc"; fi
 
 # The next line enables shell command completion for gcloud.
 if [ -f "$HOME/google-cloud-sdk/completion.zsh.inc" ]; then . "$HOME/google-cloud-sdk/completion.zsh.inc"; fi
 
-test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
-
+# NVM — eager source. Replaces the older zsh-nvm oh-my-zsh plugin (which was
+# lazy but had its own issues). If startup latency becomes a problem we can
+# revisit lazy strategies (e.g., zsh-defer) — current cost ~300ms cold.
 export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
 # Per-pane iTerm2 theme switcher. Emits OSC 1337 SetProfile=<name> to switch
 # the current session to a dynamic-profile clone of Default with only the bg
