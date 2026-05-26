@@ -171,6 +171,14 @@ Baton rule (avoid clobbering): the line below names who may edit
 
 ### BATON history
 
+- 2026-05-26 — macbook-pro took BATON for **NVM lazy-loading
+  research-blurb addition**. Added a new §Deferred research section
+  (before §Resolved side-issues) with a focused NVM lazy-loading
+  follow-up entry: why-care (~300ms × N shells/day), four options
+  to evaluate (re-add `zsh-nvm` / use `zsh-defer` / hand-rolled
+  lazy wrappers / skip NVM), constraints (identical-on-both,
+  non-interactive-script compat), and where the eventual code
+  change lands. NOTES-only. Released BATON → idle in same commit.
 - 2026-05-26 — macbook-pro took BATON for **Pass 3 post-review
   revision** (follow-on to today's adversarial review of Pass 2 +
   Pass 3). Findings landed inline rather than deferred. BLOCKER fix:
@@ -1694,6 +1702,40 @@ done; advance deferred). Pass 2 content commits can begin on next
 BATON cycle; pro authors them from the recreated worktree until Pass
 3 lands the portability fixes that unblock pro's main-checkout
 advance.
+
+## Deferred research (revisit later, not blocking)
+
+- **NVM lazy-loading — done right.** Pass 3 ships NVM as an eager
+  source (`. "$NVM_DIR/nvm.sh"` on every login shell, ~300ms cold).
+  Air's diff dropped the `zsh-nvm` oh-my-zsh plugin (which had been
+  the previous lazy story) and the canonical comment was relabeled
+  "eager" post-review for honesty. Worth revisiting when there's
+  time:
+  - **Why care:** ~300ms × however many shells per day adds up;
+    p10k instant prompt makes the latency more visible because the
+    rest of startup is fast.
+  - **Options to evaluate:**
+    1. **`zsh-nvm` again** (the plugin we dropped). Lazy, but had
+       its own historical issues — figure out what those were
+       (look at air's git log around the drop) before reintroducing.
+    2. **`zsh-defer`** (https://github.com/romkatv/zsh-defer) +
+       deferring the `nvm.sh` source. Romkatv-quality (same author
+       as p10k); composes well with instant prompt.
+    3. **Hand-rolled lazy wrappers**: define stub `nvm`/`node`/`npm`
+       functions that source `nvm.sh` on first invocation then
+       re-exec themselves. Minimal dependency, but easy to get
+       subtle bugs (think: scripts that invoke `node` via env,
+       global-installed CLIs that depend on nvm's node, etc.).
+    4. **Skip NVM entirely** if both Macs end up using Homebrew's
+       `node` for everything. Cheapest if it fits the workflow.
+  - **Constraints / non-goals:** must remain identical on both Macs
+    (per end-state #1); must not silently break tools that expect
+    `node`/`npm` on PATH at script time (look at .bash_profile,
+    osx.sh, any global npm installs).
+  - **Where to land it:** if the answer is a code change to
+    `.zshrc`, it's a small targeted follow-on commit on
+    `align/cleanup` (or post-merge on master). If the answer needs
+    a new dependency in `Brewfile`, fold into the same commit.
 
 ## Resolved side-issues (do not re-investigate)
 
