@@ -1,0 +1,32 @@
+// Zed keymap — converged Zed bindings + safe VS Code muscle-memory ports.
+// NOTE: Zed's Option-key modifier is `alt`, not `opt` (the old `opt-shift-*`
+// bindings were what produced "Invalid keystroke" in the logs).
+[
+  {
+    "context": "Editor",
+    "bindings": {
+      "cmd-shift-m": "project_symbols::Toggle", // project-wide symbols
+      "ctrl-cmd-m": "outline::Toggle", //         VS Code ctrl+cmd+m go to symbol in file
+      "ctrl-g": "editor::SelectNext", //          VS Code ctrl+g add selection to next match
+      "alt-shift-up": "editor::MoveLineUp", //    was opt-shift-up (invalid); VS Code shift+alt+up
+      "alt-shift-down": "editor::MoveLineDown", //was opt-shift-down (invalid); VS Code shift+alt+down
+      "cmd-b": "editor::GoToDefinition", //       VS Code cmd+b reveal definition
+      "cmd-l": "go_to_line::Toggle", //           VS Code cmd+l go to line
+      "ctrl-down": "editor::AddSelectionBelow", //VS Code ctrl+down insert cursor below
+      "ctrl-up": "editor::AddSelectionAbove", //  pairs with ctrl-down (VS Code used ctrl+up for reveal-in-explorer)
+      "ctrl-d": "editor::DuplicateLineDown" //    VS Code ctrl+d copy line down
+    }
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "cmd-t": "file_finder::Toggle", //          VS Code cmd+t quick open (file finder; overrides Zed's default cmd-t=project_symbols)
+      "cmd-j": "workspace::ToggleRightDock", //   existing converged binding (kept)
+      "cmd-k": "workspace::ToggleLeftDock", //    VS Code cmd+k toggle sidebar
+      "cmd-1": "project_panel::ToggleFocus", //   VS Code cmd+1 focus explorer
+      "cmd-shift-]": "pane::ActivateNextItem", // VS Code next editor tab
+      "cmd-shift-[": "pane::ActivatePreviousItem", // VS Code previous editor tab
+      "shift-escape": "workspace::ToggleBottomDock" // VS Code shift+escape close panel
+    }
+  }
+]

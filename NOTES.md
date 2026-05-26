@@ -160,6 +160,17 @@ Baton rule (avoid clobbering): the line below names who may edit
 
 ### BATON history
 
+- 2026-05-25 — macbook-air took BATON for **Pass 5 air-side fold-in**
+  (later same day as the Pass 7 entry below). Landed `zed/` config in
+  repo (new VS-Code-aligned canonical that supersedes the original
+  minimal Pass 5 plan), moved pre-overhaul originals to
+  `archived/zed-macbook-air-prepass/`, swapped live
+  `~/.config/zed/{settings,keymap}.json` to symlinks into the repo,
+  updated air's symlink manifest, expanded NOTES Pass 5 plan + added
+  §Pass 5 air-side completion section with pro-side adoption steps and
+  a Brewfile note. Verified pro had pushed nothing new (origin in sync
+  at `25284a1`, `snapshot/macbook-pro` unchanged at `9ac1d68`). Released
+  BATON → idle in same commit.
 - 2026-05-25 — macbook-air took BATON to add **Pass 7 (README
   modernization & upkeep)** to the §Pass plan — a small ledger addition
   slipped into the existing planning thread. Verified pro had pushed
@@ -383,12 +394,18 @@ is also fine and matches macbook-pro's pattern.
         symlink if broken). Only then advance main. Karabiner's
         `automatic_backups/` is an additional fallback alongside
         `snapshot/<host>`.
-- [ ] **Pass 5 — Editor & tool config**
-      - `zed/keymap.json`, `zed/settings.json`: pro has them, air
-        doesn't. Adopt on air? gitignore? Decide based on whether
-        air uses Zed.
+- [~] **Pass 5 — Editor & tool config** (air-side DONE 2026-05-25;
+      pro-side adoption pending; fzf still TBD)
+      - `zed/keymap.json`, `zed/settings.json`: ✅ **air-side landed as
+        `zed/` in repo + symlinks.** Canonical was OVERHAULED from the
+        original "adopt pro's tiny version" plan to mirror Dan's VS Code
+        setup (theme **One Dark**, JetBrains Mono 15, Ruff+pyright for
+        Python, per-language `format_on_save`, terminal dock right,
+        `opt`→`alt` keymap fix, `cmd-t`→file_finder in Workspace context
+        for Zed 1.3's default swap). See §Pass 5 air-side completion
+        below for details + pro-side adoption steps.
       - `fzf/` subdir vs root `.fzf.zsh` (already gitignored at root):
-        canonical location for fzf init shell loader.
+        canonical location for fzf init shell loader. **Still pending.**
       - Anything else surfaced in Pass 1.5.
       - VERIFICATION GATE: receiving Mac protocol per file.
 - [ ] **Pass 6 — Claude Code config in repo** (deferred to end)
@@ -980,6 +997,80 @@ loads. No `.zshrc` changes needed in Pass 5 for fzf.
 `zed/settings.json` = pro's tracked version verbatim.
 
 **Secrets scan — Pass 5 files**: pure config; no secrets. ✓ clean.
+
+### Pass 5 air-side completion — DONE 2026-05-25
+
+The original Pass 5 plan (adopt pro's minimal tracked config; archive
+air's existing files; symlink) was **superseded** in-session. Live air
+`~/.config/zed/{settings,keymap}.json` was overhauled to mirror Dan's
+VS Code setup; that overhauled config is now the Pass 5 canonical.
+
+**What landed (this commit):**
+- `zed/settings.json`, `zed/keymap.json` — verbatim copies of the
+  overhauled live air files.
+- `archived/zed-macbook-air-prepass/{settings,keymap}.json` — air's
+  pre-overhaul originals (LOSE-NO-DATA graveyard).
+- Air's `~/.config/zed/{settings,keymap}.json` now SYMLINK into
+  `zed/`; air's symlink manifest updated.
+
+**Decisions baked into the canonical (confirmed by Dan):**
+- Theme: **One Dark** — Zed's built-in default dark theme (bundled,
+  no extension). Briefly tried the Alabaster Dark extension (near-
+  exact hex match to VS Code's Alabaster Dark); reverted.
+- Font: **JetBrains Mono 15** (only font from VS Code's editor.fontFamily
+  fallback chain actually installed on the Macs).
+- Python: **Ruff** (format + lint + import-sort) + **pyright** (types);
+  `preferred_line_length: 99`; `code_actions_on_save` runs
+  `source.organizeImports.ruff` + `source.fixAll.ruff`.
+- **No in-editor AI** (Copilot / Gemini / Tabnine not ported — Claude
+  Code remains separate).
+- `git.inline_blame` on (stands in for GitLens current-line blame).
+- Per-language `format_on_save` only where VS Code had it (Python, PHP,
+  HTML, GraphQL, Go); global stays off (matches VS Code).
+- Terminal `dock: right` (the already-approved Pass 5 dock value).
+- Auto-installed Zed extensions: `php`, `graphql`, `dockerfile`, `toml`.
+- Keymap: `opt-*` → `alt-*` (Zed's modifier name; the old `opt-*` was
+  invalid and spammed the log on launch). `cmd-t` → `file_finder::Toggle`
+  MUST live in **Workspace** context, not Editor — Zed 1.3 swapped the
+  defaults (`cmd-p` = file finder, `cmd-t` = project_symbols), so an
+  Editor-only override leaks to the symbol finder whenever focus isn't
+  in an editor.
+
+**Runtime behavior to know about:**
+- On first launch, Zed wrote panel-dock keys (`project_panel`,
+  `outline_panel`, `collaboration_panel`, `agent`, `git_panel`) into
+  `settings.json`. They're committed verbatim at the top of
+  `zed/settings.json` — they reflect Dan's UI layout and should be fine
+  on pro. If pro prefers a different layout it can override locally,
+  but note: Zed re-writes `settings.json` when panel docks change, and
+  since the live file is a symlink into the repo, those writes will
+  produce a dirty working tree.
+
+**Pro-side adoption (when pro takes its next baton turn):**
+1. Quit Zed on pro.
+2. Verify pro's Zed is current (≥ 1.3.x). If still on a standalone
+   `< 1.3` app, install via `brew install --cask zed` (see Brewfile
+   note below).
+3. Move pro's current `~/.config/zed/{settings,keymap}.json` (its
+   pre-air-canonical files) to `archived/zed-macbook-pro-prepass/`
+   per the graveyard pattern.
+4. Symlink into the repo:
+   - `ln -s ~/dev/dotfiles/zed/settings.json ~/.config/zed/settings.json`
+   - `ln -s ~/dev/dotfiles/zed/keymap.json   ~/.config/zed/keymap.json`
+5. Update `manifests/symlinks-macbook-pro.txt` with the two new entries
+   (sorted alphabetically by left-hand path).
+6. Launch Zed on pro and verify (a) the 4 extensions auto-install,
+   (b) theme "One Dark" loads (it's bundled, should be instant),
+   (c) keymap loads with no `Invalid keystroke` errors in
+   `~/Library/Logs/Zed/Zed.log`, (d) `cmd-t` opens the file finder.
+
+**Brewfile note (for Pass 2 — Brewfile):** Zed on air is now installed
+via Homebrew cask (replaced a broken 0.123.6 standalone with cask zed
+1.3.6 on 2026-05-24). Pass 2's Brewfile reconciliation should add
+`cask "zed"` so both Macs converge on cask-managed Zed.
+
+**Cross-ref:** Claude memory [[pass5-zed-vscode-align]] captured the
+in-flight state before this fold-in landed; kept as historical context.
 
 ### Legacy WIP assessment — RESOLVED (2026-05-23)
 

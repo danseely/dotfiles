@@ -1,0 +1,95 @@
+// Zed settings — aligned to Dan's VS Code setup (2026-05-24).
+// Mirrors ~/Library/Application Support/Code/User/settings.json wherever Zed
+// has an equivalent. Comments tie each block back to its VS Code source.
+// Part of the dotfiles alignment project (Pass 5 — not yet folded into repo).
+{
+  // ---- Appearance ----
+  "project_panel": {
+    "dock": "left"
+  },
+  "outline_panel": {
+    "dock": "left"
+  },
+  "collaboration_panel": {
+    "dock": "left"
+  },
+  "agent": {
+    "dock": "right",
+    "favorite_models": [],
+    "model_parameters": []
+  },
+  "git_panel": {
+    "dock": "left"
+  },
+  "theme": "One Dark", //                  Zed's built-in default dark theme (was: Alabaster Dark)
+  "buffer_font_family": "JetBrains Mono", // first *installed* of VS Code's editor.fontFamily chain
+  "buffer_font_size": 15,
+  // Ligatures (VS Code editor.fontLigatures: true) are on by default in Zed via `calt`.
+
+  // ---- Editor behavior ----
+  "minimap": { "show": "never" }, //          editor.minimap.enabled: false
+  "show_whitespaces": "none", //              editor.renderWhitespace: none
+  "soft_wrap": "none", //                     editor.wordWrap / diffEditor.wordWrap: off
+  "show_completions_on_input": false, //      editor.quickSuggestions: off (comments/strings/other)
+  "inlay_hints": { "enabled": false }, //     editor.inlayHints.enabled: off
+  "indent_guides": { "enabled": true }, //    editor.guides.indentation: true
+
+  // ---- Saving ----
+  "autosave": { "after_delay": { "milliseconds": 500 } }, // files.autoSave afterDelay, 500ms
+  "format_on_save": "off", //                 VS Code has no global formatOnSave — only per-language (below)
+  "remove_trailing_whitespace_on_save": true, // files.trimTrailingWhitespace: true
+  "ensure_final_newline_on_save": true,
+
+  // ---- Git (stands in for GitLens current-line blame) ----
+  "git": { "inline_blame": { "enabled": true } },
+
+  // ---- Files / search exclusions ----
+  "file_scan_exclusions": [
+    "**/.git", "**/.svn", "**/.hg", "**/.jj", "**/CVS", "**/.DS_Store", "**/Thumbs.db",
+    "**/__pycache__", //   files.exclude / files.watcherExclude
+    "**/.venv", //         search.exclude
+    "**/.phan" //          search.exclude
+  ],
+  "file_types": {
+    "Markdown": ["*.txt"] // files.associations: "*.txt": "markdown"
+  },
+
+  // ---- Terminal ----
+  "terminal": {
+    "dock": "right", //   Pass 5 APPROVED canonical (pro's setting, Dan 2026-05-23)
+    "blinking": "off"
+  },
+
+  // ---- Per-language (mirrors VS Code [lang] formatOnSave / formatter blocks) ----
+  "languages": {
+    "Python": {
+      // Ruff = format + lint + import-sort (replaces Black + isort); pyright = types.
+      "language_servers": ["pyright", "ruff"],
+      "format_on_save": "on",
+      "formatter": { "language_server": { "name": "ruff" } },
+      "code_actions_on_save": {
+        "source.organizeImports.ruff": true, // [python] source.organizeImports: explicit
+        "source.fixAll.ruff": true
+      },
+      "preferred_line_length": 99, //  [python] editor.rulers col 99
+      "wrap_guides": [99]
+    },
+    "PHP": { "format_on_save": "on" }, //      [php] formatOnSave (Zed uses intelephense, not prettier-php)
+    "HTML": { "format_on_save": "on" }, //     [html] formatOnSave
+    "GraphQL": { "format_on_save": "on" }, //  [graphql] formatOnSave (prettier)
+    "Go": { "format_on_save": "on", "hard_tabs": true }, // [go] formatOnSave (gofmt via gopls)
+    "Markdown": {
+      "format_on_save": "off",
+      "remove_trailing_whitespace_on_save": false // [markdown] files.trimTrailingWhitespace: false
+    }
+  },
+
+  // ---- Extensions to auto-install on launch (theme + languages from your VS Code set) ----
+  // If any don't appear, open the command palette -> "zed: extensions" and install by name.
+  "auto_install_extensions": {
+    "php": true, //           PHP language support (intelephense)
+    "graphql": true, //       graphql.vscode-graphql
+    "dockerfile": true, //    Dockerfile support
+    "toml": true //           TOML support
+  }
+}

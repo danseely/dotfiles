@@ -1,0 +1,18 @@
+[
+  {
+    "context": "Editor",
+    "bindings": {
+      "cmd-t": "file_finder::Toggle",
+      "cmd-shift-m": "project_symbols::Toggle",
+      "ctrl-g": "editor::SelectNext",
+      "opt-shift-up": "editor::MoveLineUp",
+      "opt-shift-down": "editor::MoveLineDown"
+    }
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "cmd-j": "workspace::ToggleRightDock"
+    }
+  }
+]
