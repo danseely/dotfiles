@@ -16,8 +16,12 @@
 >    does the work, release back to `idle` at the end.
 > 4. §Decisions log = settled (don't relitigate). §Pass plan & status =
 >    the work queue. §Open questions = what's actively unresolved.
-> 5. Primary guardrail: **LOSE NO DATA**. Preserve everything; throw away
->    only after both Macs have verified.
+> 5. Primary guardrails: **LOSE NO DATA** (preserve everything; throw
+>    away only after both Macs have verified) AND **LIVE-BREAKAGE
+>    PROHIBITED** (both Macs are in-use, work-reliant; no change may
+>    land on a live `~/dev/dotfiles` checkout until verified safe in
+>    a worktree, including temporary degradation). See §Decisions log
+>    for full text + §Pass plan per-pass risk table.
 
 ## Goal / end-state
 
@@ -33,6 +37,7 @@ speculatively. Confirmed by Dan, 2026-05-21.
 |---|----------|-------|
 | End state | identical (#1), `*.local` fallback only where forced | **confirmed 2026-05-21** |
 | Primary guardrail | **LOSE NO DATA** — preserve everything; throw away only after both Macs verified | **confirmed 2026-05-21** |
+| Primary guardrail 2 | **LIVE-BREAKAGE PROHIBITED** — both Macs are in-use, work-reliant machines. Changes that could break or degrade live state (interactive shell startup, oh-my-zsh/p10k load, keyboard remapping, iTerm launch, git operations, editor launch) MUST NOT land on a live `~/dev/dotfiles` checkout until verified safe in isolation (worktree). Temporary degradation counts as breakage. If a change is unavoidable but live-affecting, it must be staged: (a) authored in a worktree, (b) smoke-tested via selective live test, (c) only then promoted to main. The deletions-only danger check is **necessary but not sufficient** — it doesn't catch content modifications to files reached through symlinks. Always pair it with a worktree smoke test for any pass that touches: `.zshrc`, `.zshenv`, `.zprofile`, `.p10k.zsh`, `.gitconfig`, `karabiner.json`, Zed config, iTerm plist. | **confirmed 2026-05-26** |
 | Snapshot branch labels | `macbook-pro` (Dan-Seely D6RX99KXNMAA), `macbook-air` | confirmed 2026-05-21 |
 | Cross-machine compare | Run Claude on BOTH Macs, coordinate via git | set |
 | Progress tracking | this `NOTES.md` (in repo) + Claude memory | set |
@@ -166,6 +171,28 @@ Baton rule (avoid clobbering): the line below names who may edit
 
 ### BATON history
 
+- 2026-05-26 — macbook-pro took BATON for **LIVE-BREAKAGE PROHIBITED
+  guardrail capture** (follow-on to the Pass 1 advance rollback
+  earlier same day). Today's session — advance main → break pro's
+  oh-my-zsh load → roll back — exposed a missing top-level principle:
+  no explicit prohibition on landing changes that could break or
+  degrade live state on these in-use, work-reliant Macs. Process
+  saved us via smoke test + rollback, but the rule wasn't named.
+  Landed three additions to NOTES: (1) §Decisions log entry
+  "Primary guardrail 2: LIVE-BREAKAGE PROHIBITED" with the explicit
+  scope list (`.zshrc`/`.zshenv`/`.zprofile`/`.p10k.zsh`/`.gitconfig`/
+  `karabiner.json`/Zed/iTerm), (2) new §Hardened verification
+  protocol step 3 "Functional regression pre-flight" — the
+  deletions-only danger check is now formally documented as
+  necessary-but-not-sufficient and must be paired with a worktree
+  smoke test for any pass touching the scoped files; original
+  step 3 (selective live test) renumbered to 4, etc., (3) new
+  §Per-pass live-breakage risk table at the top of §Pass plan
+  & status with explicit None/Low/Medium/High tags + rationale
+  per pass. Also updated §Fresh-session quickstart to mention the
+  new guardrail alongside LOSE-NO-DATA so cold-start sessions
+  pick it up. NOTES.md only; no config content. Released BATON →
+  idle in same commit.
 - 2026-05-26 — macbook-pro took BATON for **Pass 1 verification + pro
   symlink manifest + cross-Mac username portability reframe**
   (Pass 1.5 pro-side closing). Generated
@@ -268,14 +295,37 @@ verified). Apply for every pass that touches tracked file content:
    deletion is a live symlink target, do NOT advance main yet. Resolve
    first: re-point symlink, replace with file, or accept and clean up
    the symlink post-pull. Document the resolution in NOTES.
-3. **Selective live test** (higher-risk passes only — Karabiner, .zshrc).
+3. **Functional regression pre-flight** (per Primary guardrail 2:
+   LIVE-BREAKAGE PROHIBITED). Before advancing main, run the pass's
+   functional smoke test against the worktree as a stand-in for live
+   state. The deletions-only danger check (step 2) does NOT catch
+   content modifications to files reached through symlinks — but
+   those modifications can still break live config. Examples:
+   - Shell-affecting passes: source the worktree `.zshrc` in a
+     subshell — `ZDOTDIR=~/dev/dotfiles-align/zsh zsh -l -i -c
+     'echo OK; type omz; type git'` — to test the worktree's
+     `.zshrc` without symlinking it live. Watch for any
+     `no such file` / `command not found` / hardcoded-path errors.
+   - Pass 2 portability: confirm `git -C ~/dev/adadapted config
+     user.email` resolves correctly against the worktree's
+     `.gitconfig` via `GIT_CONFIG_GLOBAL=~/dev/dotfiles-align/.gitconfig`.
+   - Pass 0 / iTerm: launch iTerm WITHOUT the symlinked profile and
+     confirm core behavior; only then symlink the curated profile in.
+
+   If the pre-flight surfaces a regression — even a degradation,
+   not just a hard break — the advance is **BLOCKED** until the
+   regression is fixed in `align/cleanup`. Document the block in
+   NOTES (which pass, which file, which line, the resolution plan).
+   Today's deferred main-advance on macbook-pro (Pass 1 verification)
+   is the worked example.
+4. **Selective live test** (higher-risk passes only — Karabiner, .zshrc).
    Temporarily `ln -sf <worktree-path> <live-path>` for the affected
    file, exercise behavior, revert symlink if broken. Examples:
    - `.zshrc`: `ln -sf ~/dev/dotfiles-align/zsh/.zshrc ~/.zshrc; zsh -l -i -c true; <revert if errors>`
    - `karabiner.json`: `ln -sf ~/dev/dotfiles-align/karabiner/karabiner.json ~/.config/karabiner/karabiner.json` (karabiner auto-reloads); revert if remap behavior broken.
-4. **Advance main checkout**: in main, `git pull --ff-only origin align/cleanup`.
-5. **Smoke test** the pass-specific behavior in main; mark verified in NOTES.
-6. **Rollback if needed**: `git checkout snapshot/<host>` restores all
+5. **Advance main checkout**: in main, `git pull --ff-only origin align/cleanup`.
+6. **Smoke test** the pass-specific behavior in main; mark verified in NOTES.
+7. **Rollback if needed**: `git checkout snapshot/<host>` restores all
    repo content to pre-cleanup state. Symlinks in `~` are untouched
    throughout — only the *content at their targets* changes, which
    reverts with the checkout.
@@ -286,6 +336,30 @@ every commit) which has been working for macbook-air. Worktree authoring
 is also fine and matches macbook-pro's pattern.
 
 ## Pass plan & status
+
+### Per-pass live-breakage risk (per Primary guardrail 2)
+
+Every pass is tagged with its risk of breaking or degrading live
+state. Higher-risk passes require the §Hardened verification
+protocol step 3 (functional regression pre-flight) AND step 4
+(selective live test) before any main-checkout advance.
+
+| Pass | Live-breakage risk | Why |
+|---|---|---|
+| Pass 0 (iTerm decouple + curated export) | **High** | iTerm prefs surgery requires iTerm fully quit; mistakes brick the prefs domain |
+| Pass 1 (gitignore + hygiene) | **None** | Additive only (gitignore + un-track); no content changes to symlink-reached files |
+| Pass 1.5 (manifests + analysis) | **None** | NOTES + manifest files only |
+| Pass 2 (env + identity) | **Low** | `.gitconfig`, `.zprofile`, `.zshenv`, `.bash_profile`, `osx.sh`, `Brewfile`. Includes the username-portability fixes that UNBLOCK pro for Pass 3; but the interactive-shell breakage itself lives in Pass 3 |
+| Pass 3 (`.zshrc` + `.p10k.zsh`) | **Medium-High** | Shell startup. Cross-Mac username drift surfaced here (line 12). All new shells inherit any breakage immediately |
+| Pass 4 (Karabiner) | **High** | Keyboard remapping. A broken karabiner.json can leave Dan unable to type. Selective live test is mandatory |
+| Pass 5 (Zed) | **Low-Medium** | Editor only; no shell impact. Bad config means Zed launches degraded, not unusable |
+| Pass 6 (Claude Code config) | **Low** | Claude sessions separable from shell; bad config means a Claude session degrades, not the OS |
+| Pass 7 (README + portability lint) | **None** | Docs + a non-blocking script |
+
+**Pro's main-checkout advance is gated on Pass 3** — until the
+`$HOME/.oh-my-zsh` + gcloud-path fixes land, advancing main from
+`snapshot/macbook-pro` to `align/cleanup` breaks pro's interactive
+shell (worked example: 2026-05-26 attempt + rollback).
 
 - [ ] **Pass 0 — iTerm plist → curated export**. Design (REFINED):
       Curation scope = **profiles ONLY**. Verified on MacBook-Air
