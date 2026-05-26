@@ -171,6 +171,25 @@ Baton rule (avoid clobbering): the line below names who may edit
 
 ### BATON history
 
+- 2026-05-26 — macbook-pro took BATON for **portability lint
+  carve-out from Pass 7**. Shipped `scripts/check-portability.sh`
+  (bash, ~60 lines): `git grep -nE '/Users/(dan|dseely)/'` over
+  tracked files with documented excludes (`manifests/`, `archived/`,
+  `snapshot/`, `.zshrc-backup-24-jan-2022`, `NOTES.md`, `README.md`,
+  the script itself). Exit 0 clean / 1 on hits, with fix-or-exempt
+  guidance in the failure message. Validation: clean pass from
+  worktree (`align/cleanup` at `aa834dc`, 0 hits); intentional fail
+  from main checkout (`snapshot/macbook-pro` at `9ac1d68`, 8
+  expected legacy hits) — confirms CWD-relative behavior is correct.
+  Also tested catch-and-clear: injecting a seeded `/Users/dan/...`
+  line into a tracked file makes the lint fail with the precise
+  hit; `git checkout HEAD --` clears it. Updated Pass 7 entry:
+  `[ ]` → `[~]` (lint shipped, README modernization still pending).
+  Added Pass 7 deferred follow-ups (diff-based mode for NOTES/README,
+  pre-commit hook wiring post-merge). Air can run the lint as part
+  of its verification turn (0 hits expected from a worktree-on-
+  align/cleanup; per-file failure list from anywhere else). Released
+  BATON → idle in same commit.
 - 2026-05-26 — macbook-pro took BATON for **NVM lazy-loading
   research-blurb addition**. Added a new §Deferred research section
   (before §Resolved side-issues) with a focused NVM lazy-loading
@@ -677,8 +696,10 @@ shell (worked example: 2026-05-26 attempt + rollback).
         `skills/`) vs per-host (`*.local.json` already gitignored).
       - VERIFICATION GATE: receiving Mac protocol + confirm Claude
         sessions start cleanly with new symlinks in place.
-- [ ] **Pass 7 — README modernization & upkeep** (the "separate later
-      cleanup pass" deferred from Pass 2 — see §Pass 2 `README.md` analysis)
+- [~] **Pass 7 — README modernization & upkeep** (the "separate later
+      cleanup pass" deferred from Pass 2 — see §Pass 2 `README.md` analysis).
+      Portability lint carved out + shipped 2026-05-26; README
+      modernization still pending.
       - `README.md` is stale WIP: wrong clone path (`~/.dotfiles` vs the
         real `~/dev/dotfiles`), outdated symlink list, and "High-level
         todos" this project has already resolved (oh-my-zsh / fzf / iterm
@@ -690,15 +711,31 @@ shell (worked example: 2026-05-26 attempt + rollback).
         [[pass5-zed-vscode-align]]).
       - Treat README as a LIVING doc: refresh it as each pass lands so it
         never drifts again; do a final accuracy pass at merge time.
-      - **Portability lint** (per username-portability decision):
-        ship `scripts/check-portability.sh` that greps the repo for
-        `/Users/dan/` and `/Users/dseely/`, skipping the documented
-        exceptions (`manifests/`, `.zshrc-backup-24-jan-2022`,
-        `archived/`, `snapshot/`, plus NOTES/README which may carry
-        example paths). Exits non-zero on hits. Optionally wired as
-        a pre-commit hook via `.git/hooks/pre-commit` or
-        `core.hooksPath`. Run it as a project-end gate before the
-        single merge to master.
+      - **Portability lint — SHIPPED 2026-05-26** at
+        `scripts/check-portability.sh`. Greps tracked files via
+        `git grep -nE '/Users/(dan|dseely)/'` with documented
+        excludes (`manifests/`, `archived/`, `snapshot/`,
+        `.zshrc-backup-24-jan-2022`, `NOTES.md`, `README.md`,
+        and the script itself). Exits 0 clean / 1 on hits.
+        Behavior is **CWD-relative**: invoking from
+        `~/dev/dotfiles-align` (worktree on `align/cleanup`) →
+        currently 0 hits ✅; invoking from `~/dev/dotfiles` (pro
+        main on `snapshot/macbook-pro`) → 8 expected legacy hits
+        from pre-Pass-2/3 content that will disappear once main
+        advances. This is the desired behavior — the script lints
+        whichever working tree it's launched from. Pre-commit hook
+        wiring (`.git/hooks/pre-commit` or `core.hooksPath`) is
+        optional and deferred — manual invocation before any
+        canonical-touching commit, plus a project-end gate before
+        the single merge to master, is the current expectation.
+      - **Portability lint follow-ups** (deferred):
+        - Add diff-based mode to allow NOTES.md/README.md `/Users/<name>/`
+          references in pre-existing content while flagging *new*
+          additions. Lower priority — soft-exempting both files in
+          full is acceptable for now.
+        - Wire pre-commit hook on both Macs after final canonical
+          state lands (post-merge), so accidental regressions during
+          future maintenance get caught at commit time.
       - VERIFICATION GATE: README's documented symlinks/steps match reality
         on BOTH Macs; portability lint exits 0 on both Macs.
 - [ ] **Final — Merge `align/cleanup` → `master`** in one commit,
