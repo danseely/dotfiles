@@ -9,3 +9,5 @@ export PATH="$PYENV_ROOT/bin:$PATH"
 # GPG setup
 export GPG_TTY=$(tty)
 
+# Homebrew
+eval "$(/opt/homebrew/bin/brew shellenv)"

@@ -171,6 +171,23 @@ Baton rule (avoid clobbering): the line below names who may edit
 
 ### BATON history
 
+- 2026-05-26 — macbook-pro took BATON for **Pass 2 authoring**
+  (content commits, all 5 originally-scoped files + the 3
+  username-portability files). Authored in pro worktree
+  `~/dev/dotfiles-align`; pro main untouched (stays on
+  `snapshot/macbook-pro` per the deferred-advance gate; Pass 3 is
+  the unblock). Functional regression pre-flight in worktree using
+  `GIT_CONFIG_GLOBAL` + ad-hoc git repos exercised `.gitconfig`
+  includeIf in both directions (personal email outside
+  `~/dev/adadapted/`, work email inside) ✅; `.zprofile` brew
+  shellenv populates PATH ✅; `.zshenv` `[ -f ]` guard correctly
+  no-ops when `~/.cargo/env` absent ✅; portability lint pre-check
+  (`grep /Users/dan|/Users/dseely`) on the 7 authored files
+  returns zero hits ✅. See §Pass 2 authored — DONE for the full
+  file-by-file table + caveats (includeIf testing required a
+  temporary `~/dev/dotfiles/gitconfig` symlink workaround). Air-side
+  verification + main-advance left for air's next session. Released
+  BATON → idle in same commit.
 - 2026-05-26 — macbook-pro took BATON for **LIVE-BREAKAGE PROHIBITED
   guardrail capture** (follow-on to the Pass 1 advance rollback
   earlier same day). Today's session — advance main → break pro's
@@ -471,7 +488,10 @@ shell (worked example: 2026-05-26 attempt + rollback).
       - **Output**: revised per-file scope captured in NOTES, manifests
         committed, pro on Pass 1 in main checkout, all open analytical
         questions resolved before any Pass 2+ content commits.
-- [ ] **Pass 2 — Env & identity** (low-risk: shells + git config)
+- [~] **Pass 2 — Env & identity** (authored 2026-05-26 in pro worktree;
+      air-side verification + pro main-advance still pending — see
+      §Pass 2 completion below; LIVE: only authored files reside on
+      `align/cleanup`, pro/air main checkouts untouched)
       - `.gitconfig`: main file at repo root + `gitconfig/adadapted`
         (3 lines, work-email override), referenced via
         `[includeIf "gitdir:~/dev/adadapted/"] path = ~/dev/dotfiles/gitconfig/adadapted`.
@@ -840,6 +860,79 @@ preserving** — nothing to archive.
 Pass 2 work plan for `.zshenv` on air: `rm ~/.zshenv && ln -s
 ~/dev/dotfiles/zsh/.zshenv ~/.zshenv`. (After the repo file is
 committed with the `[ -f ]` guard.)
+
+### Pass 2 authored — DONE 2026-05-26 (in pro worktree)
+
+All five originally-scoped files + the three username-portability
+files landed on `align/cleanup`. Authored from pro's worktree
+(`~/dev/dotfiles-align`); pro main + air main NOT advanced — air
+verifies in its own session and decides when to flip its main.
+
+**Files landed:**
+
+| File | Change |
+|---|---|
+| `.gitconfig` | email → `dan@danseely.net`; `excludesfile` → `~/.gitignore_global`; `commit.template` → `~/.stCommitMsg`; includeIf path → `~/dev/dotfiles/gitconfig/adadapted`; gh credential helper blocks for github.com + gist.github.com; comments updated for repo-internal include |
+| `gitconfig/adadapted` (NEW) | 3-line work-email override: `[user] email = dseely@adadapted.com` |
+| `zsh/.zprofile` | append `# Homebrew\neval "$(/opt/homebrew/bin/brew shellenv)"` |
+| `zsh/.zshenv` (NEW) | `[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"` (guard for fresh-clone safety) |
+| `.bash_profile` | gcloud `source` lines: `/Users/dan/dev/google-cloud-sdk/...` → `"$HOME/dev/google-cloud-sdk/..."` (per username-portability) |
+| `osx.sh` | brew shellenv `>>` target: `/Users/dan/.zprofile` → `"$HOME/.zprofile"` (per username-portability) |
+| `Brewfile` | `+cask 'keyboard-cleaner'`, `+cask 'zed'` (Pass 5 addendum), comment out `mas 'XCode'` |
+
+**Functional regression pre-flight** (per §Hardened verification
+protocol step 3 — using `GIT_CONFIG_GLOBAL` + ad-hoc git repos to
+exercise `.gitconfig` and `ZDOTDIR`/direct-source to exercise
+`.zprofile`/`.zshenv` against the worktree, NOT live):
+
+- **`.gitconfig` outside `~/dev/adadapted/`**: `user.email`
+  resolves to `dan@danseely.net` ✅
+- **`.gitconfig` inside `~/dev/adadapted/`**: `user.email`
+  resolves to `dseely@adadapted.com` via the includeIf →
+  `gitconfig/adadapted` chain ✅
+- Other config keys resolve to portable paths:
+  `commit.template = ~/.stCommitMsg`,
+  `core.excludesfile = ~/.gitignore_global`,
+  `user.signingkey` = ed25519 public key (unchanged).
+- **`.zprofile`**: sourcing the worktree file populates PATH with
+  `/opt/homebrew/bin` + `/opt/homebrew/sbin` and `PYENV_ROOT` ✅
+- **`.zshenv`**: `[ -f ]` guard correctly skips when `~/.cargo/env`
+  is absent (pro's case — exit=1 from the test) ✅
+- Audit: `grep -nH "/Users/dan\|/Users/dseely"` on the 7 authored
+  files returns ZERO hits ✅
+
+**Pre-flight caveat noted**: testing `.gitconfig`'s includeIf
+requires the path `~/dev/dotfiles/gitconfig/adadapted` to be
+reachable. With pro's main still on `snapshot/macbook-pro` (which
+doesn't have the `gitconfig/` subdir), the file isn't yet at the
+expected live location. The pre-flight worked around this by
+temporarily symlinking `~/dev/dotfiles/gitconfig` →
+`~/dev/dotfiles-align/gitconfig` during the test. Once pro's main
+advances to `align/cleanup` (post-Pass-3), the symlink is no longer
+needed and the real path resolves natively.
+
+**Air verification — pending air session.** Air's main IS on
+`master` (or wherever air put it post-Pass-1 verification). Air
+needs to: (a) pull `align/cleanup` into its worktree, (b) danger
+check, (c) functional pre-flight on `.gitconfig` includeIf using
+air's worktree path (`GIT_CONFIG_GLOBAL=~/dev/dotfiles-align/.gitconfig`
+inside `~/dev/adadapted/<test-repo>` — assuming air has a
+`~/dev/adadapted/` dir; if not, the test exercise can skip), (d)
+advance main, (e) confirm `git config user.email` returns the right
+value inside vs outside `~/dev/adadapted/`. README.md whitespace from
+air's pre-Pass-1 working tree is irrelevant to canonical — Pass 7
+will modernize the file.
+
+**Pro main-advance still deferred** to Pass 3 (interactive-shell
+breakage in `zsh/.zshrc:12` until Pass 3 lands `$HOME/.oh-my-zsh`).
+Pass 2 doesn't unblock pro; that's Pass 3's job.
+
+**Old external `~/dev/adadapted/.gitconfig`**: Pass 2's canonical
+includeIf no longer references it (now points at
+`~/dev/dotfiles/gitconfig/adadapted` in-repo). If the old file
+exists anywhere, it's inert. Pro doesn't have `~/dev/adadapted/`
+populated; air to verify and (if file exists) `cat` it for any
+content beyond `email = dseely@adadapted.com` then archive or delete.
 
 ### Diff dive — Pass 3 scope (2026-05-22)
 

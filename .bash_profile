@@ -101,10 +101,10 @@ alias sandboxssh="ssh ubuntu@34.229.169.195 -i ~/.ssh/aasand.pem"
 alias prodssh="ssh ubuntu@3.88.91.142 -i ~/.ssh/aaprod.pem"
 
 # The next line updates PATH for the Google Cloud SDK.
-if [ -f '/Users/dan/dev/google-cloud-sdk/path.bash.inc' ]; then . '/Users/dan/dev/google-cloud-sdk/path.bash.inc'; fi
+if [ -f "$HOME/dev/google-cloud-sdk/path.bash.inc" ]; then . "$HOME/dev/google-cloud-sdk/path.bash.inc"; fi
 
 # The next line enables shell command completion for gcloud.
-if [ -f '/Users/dan/dev/google-cloud-sdk/completion.bash.inc' ]; then . '/Users/dan/dev/google-cloud-sdk/completion.bash.inc'; fi
+if [ -f "$HOME/dev/google-cloud-sdk/completion.bash.inc" ]; then . "$HOME/dev/google-cloud-sdk/completion.bash.inc"; fi
 
 # pyenv
 if command -v pyenv 1>/dev/null 2>&1; then
