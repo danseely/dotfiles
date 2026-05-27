@@ -171,6 +171,19 @@ Baton rule (avoid clobbering): the line below names who may edit
 
 ### BATON history
 
+- 2026-05-26 — macbook-pro took BATON for **§Incidents section
+  capture**: 2026-05-26 `~/dev/adadapted/` case-insensitive
+  `rm -rf` destruction during a `.gitconfig` `gitdir/i:` pre-flight
+  test. Documents what happened, blast radius, recovery picture
+  (GitHub for source, `~/.tasks/tasks.db` snapshot for 402 tasks
+  incl. mission scope, lost everything local-only), root causes
+  (test fixtures in production namespace; APFS case-insensitivity
+  unaccounted for; `rm -rf` on `$HOME` path; no pre-execution
+  scan), and rules that should have been in place. Explicitly
+  flags that NOTES.md is the wrong durable home (deleted at
+  project end) — the lessons belong in `~/.claude/CLAUDE.md`
+  (user-global, every-session) and/or a PreToolUse hook. NOTES-only;
+  no config or live-state changes. Released BATON → idle in same commit.
 - 2026-05-26 — macbook-pro took BATON for **portability lint
   carve-out from Pass 7**. Shipped `scripts/check-portability.sh`
   (bash, ~60 lines): `git grep -nE '/Users/(dan|dseely)/'` over
@@ -1773,6 +1786,107 @@ advance.
     `.zshrc`, it's a small targeted follow-on commit on
     `align/cleanup` (or post-merge on master). If the answer needs
     a new dependency in `Brewfile`, fold into the same commit.
+
+## Incidents (worked examples — guardrail violations)
+
+### 2026-05-26 — `~/dev/adadapted/` destroyed by case-insensitive `rm -rf`
+
+**What happened.** During the Pass 2 + Pass 3 post-review revision
+session, I (Claude) ran a `.gitconfig` `gitdir/i:` pre-flight test
+using these commands:
+
+```
+mkdir -p ~/dev/AdAdapted/case-test && cd ~/dev/AdAdapted/case-test && git init -q
+...
+cd / && rm -rf ~/dev/AdAdapted
+```
+
+macOS APFS is **case-insensitive but case-preserving** by default.
+`~/dev/AdAdapted/` resolved to the existing `~/dev/adadapted/`
+directory (same inode), so the `mkdir -p` added `case-test/` INSIDE
+Dan's real adadapted dir, and the `rm -rf ~/dev/AdAdapted` then
+recursively destroyed the entire real tree — ~60 git repos, all
+uncommitted working-tree changes, all unpushed branches, all `.env`
+files, all `.claude/state/coordinator/missions/` mission state, all
+`.venv/` and `node_modules/`, IDE state, the lot.
+
+**Blast radius.** Everything under `~/dev/adadapted/`. Roughly:
+- 60+ repos listed in `~/.claude/plugin-data/orchestrator/repos.yaml`
+- ~45 in-flight orchestrator tasks (recovered task BODIES from
+  `~/.tasks/tasks.db`, but not their per-repo `.claude/state/...`
+  artifacts)
+- All local-only secrets, env vars, mission artifacts, conversation
+  drafts, IDE workspace state, build outputs
+
+**Recovery picture.**
+- **Recovered ✅**: source code (re-cloneable from GitHub),
+  `~/.tasks/tasks.db` (snapshotted to
+  `~/Library/Caches/dotfiles-recovery-2026-05-26/tasks.db.snapshot`
+  preserving 402 tasks incl. mission scope/bodies),
+  `repos.yaml` inventory, post-deletion log fragments from
+  still-running orchestrator processes (mv'd to recovery dir to
+  keep their cwd FDs valid).
+- **Lost ❌**: uncommitted edits, unpushed branches, `.env`s,
+  `.claude/state/coordinator/missions/...` per-repo files, IDE
+  state, local databases/dumps, anything not in GitHub.
+- **Recovery routes that were not viable**: Time Machine (not
+  configured), APFS local snapshots (zero on the Data volume
+  `disk3s5`; only `com.apple.os.update-*` on the System volume
+  which excludes user data), cloud sync (none watching `~/dev/`),
+  held-open file descriptors (no `(deleted)` markers in lsof
+  across the running claude processes).
+
+**This violated, hard, two of this project's primary guardrails**
+documented in §Decisions log:
+- **LOSE NO DATA** — preserve everything; throw away only after
+  both Macs verified.
+- **LIVE-BREAKAGE PROHIBITED** — changes that could break or
+  degrade live state must not land on a live `~/dev/dotfiles`
+  checkout until verified safe in isolation.
+
+The fact that the `rm -rf` targeted `~/dev/adadapted/` rather than
+the dotfiles checkout doesn't soften the violation — the principle
+is *don't touch the user's working namespace with destructive
+operations*, full stop.
+
+**Root causes.**
+1. **Test fixtures inside production namespace.** The pre-flight
+   used `~/dev/AdAdapted/case-test/` — a path that *looked*
+   visually distinct from `~/dev/adadapted/` but is the same path
+   on a case-insensitive filesystem. Test scratch should always
+   live under `/tmp/`, `$TMPDIR`, or `$(mktemp -d)` — never under
+   any path the user might have data at, regardless of case
+   styling.
+2. **Case-insensitive APFS unaccounted for.** I treated path case
+   as if it provided isolation. It does not on macOS APFS default
+   case-insensitive volumes (which is the default; Dan's
+   `/Users/dseely/` lives on case-insensitive `disk3s5`).
+3. **`rm -rf` without scrutiny.** Destructive recursive removal
+   on a user-home path with no double-check. The session's
+   LIVE-BREAKAGE-PROHIBITED guardrail (added the same day!)
+   doesn't currently name `rm -rf` as a class. It should.
+4. **No pre-execution scan.** No automated check intercepted the
+   command. The harness ran it as written. A hook or skill could
+   have asked for confirmation.
+
+**Rules that should have been in place** (now lessons for the
+durable lessons-learned mechanism — see below this entry / outside
+this NOTES file):
+
+| Rule | Rationale |
+|---|---|
+| All scratch/test paths MUST live under `/tmp/`, `$TMPDIR`, or `$(mktemp -d)` | Never overlap with user data even by accident |
+| Treat macOS APFS as case-insensitive unless `diskutil info /` proves otherwise | `~/dev/Foo/` and `~/dev/foo/` are the same path; case is not a separation mechanism |
+| `rm -rf` on any path under `$HOME` requires explicit user confirmation in that turn | The default-no destructive-action principle, applied to the highest-blast-radius command |
+| Cleanup commands following test setup must use the exact same path variable that the setup created | Not a similar-looking literal; not a slight case variant |
+| Prefer `git worktree add` + cleanup-via-`git worktree remove` to ad-hoc directory tests | git knows where its worktrees live and won't let you blow up a checkout |
+
+**Where this lesson belongs durably.** NOTES.md is deleted at
+project end. The durable home is `~/.claude/CLAUDE.md`
+(user-global; loaded for every Claude Code session in every
+project) and/or a PreToolUse hook that intercepts `rm -rf` on
+`$HOME`-rooted paths. See discussion immediately following this
+incident entry in the session transcript on 2026-05-26.
 
 ## Resolved side-issues (do not re-investigate)
 
