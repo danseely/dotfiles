@@ -171,6 +171,20 @@ Baton rule (avoid clobbering): the line below names who may edit
 
 ### BATON history
 
+- 2026-05-27 — macbook-pro took BATON to register a new **Open
+  question on `JetBrains Mono NL`**. Context: during a project-hold
+  session Dan asked to tactically sync pro's dangling local Zed
+  config to the air canonical (`~/.config/zed/{settings,keymap}.json`
+  copied as plain files from `~/dev/dotfiles-align/zed/`, NOT
+  symlinked — Pass 5 pro-side adoption still pending). Pro has the
+  full `JetBrains Mono NL` family installed locally, so the live
+  pro `settings.json` was further patched to use `JetBrains Mono NL`
+  as a pro-local override of the air canonical (`JetBrains Mono`).
+  This adds a future canonical decision to Pass 5's pro-side scope
+  (flip canonical to NL + install on air via Brewfile, OR keep
+  canonical + `*.local` override, OR defer). Air is dormant; no
+  race. NOTES-only; no `align/cleanup` config content. Released
+  BATON → idle in same commit.
 - 2026-05-26 — macbook-pro took BATON for **Pass 6 hook note**:
   added `hooks/` to Pass 6's selective-symlink scope + a focused
   note that `bash-rm-rf-guard.sh` + the `~/.claude/CLAUDE.md`
@@ -1933,5 +1947,26 @@ incident entry in the session transcript on 2026-05-26.
   from `~/.claude/<thing>` → repo's `claude/<thing>`. See Pass 6
   in §Pass plan.
 
-**No live open questions** as of 2026-05-22. New questions go inline
-in the relevant pass entry or in this section as they arise.
+- **Buffer font: `JetBrains Mono NL` vs `JetBrains Mono`** (new
+  2026-05-27). Air canonical (`zed/settings.json`) uses `JetBrains
+  Mono` (ligatures on by default via `calt`). Pro has the full
+  `JetBrains Mono NL` family installed locally (`~/Library/Fonts/`,
+  family name "JetBrains Mono NL" — the "no-ligatures" variant) and
+  now uses it as a pro-local override in its out-of-band-synced
+  `~/.config/zed/settings.json` (Dan, 2026-05-27 — done during a
+  tactical Zed config copy that did NOT advance Pass 5 pro-side
+  adoption; live file is still a plain file, not a symlink into
+  the repo). Decision pending for whenever Pass 5 pro-side
+  adoption actually lands:
+  (a) flip canonical to `JetBrains Mono NL` and confirm/install it
+      on air (`brew install --cask font-jetbrains-mono-nl`; add to
+      Pass 2 Brewfile) — preferred per end-state #1 (unify);
+  (b) keep `JetBrains Mono` canonical and ship a pro-local override
+      via the `*.local` mechanism — only if Dan and air disagree on
+      ligatures;
+  (c) defer until Pass 5 pro-side adoption is on the table.
+  Reminder: font preference is unifiable, so `*.local` should be
+  the last resort per the username-portability decision rationale.
+
+New questions go inline in the relevant pass entry or in this
+section as they arise.
