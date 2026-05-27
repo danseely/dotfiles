@@ -171,6 +171,15 @@ Baton rule (avoid clobbering): the line below names who may edit
 
 ### BATON history
 
+- 2026-05-26 — macbook-pro took BATON for **Pass 6 hook note**:
+  added `hooks/` to Pass 6's selective-symlink scope + a focused
+  note that `bash-rm-rf-guard.sh` + the `~/.claude/CLAUDE.md`
+  §Filesystem Safety section (both installed live on pro today,
+  triggered by the §Incidents `~/dev/adadapted/` event) must
+  travel to air via the eventual Pass 6 symlink set. Pre-symlink
+  test on air = run the hook self-tests (16 test cases in the pro
+  session transcript) before wiring `settings.json`. NOTES-only;
+  no live changes. Released BATON → idle in same commit.
 - 2026-05-26 — macbook-pro took BATON for **§Incidents section
   capture**: 2026-05-26 `~/dev/adadapted/` case-insensitive
   `rm -rf` destruction during a `.gitconfig` `gitdir/i:` pre-flight
@@ -700,13 +709,22 @@ shell (worked example: 2026-05-26 attempt + rollback).
       - VERIFICATION GATE: receiving Mac protocol per file.
 - [ ] **Pass 6 — Claude Code config in repo** (deferred to end)
       - Bring `~/.claude/CLAUDE.md`, `settings.json`, `keybindings.json`,
-        `statusline-command.sh`, `skills/` into repo at `claude/`
-        via **selective symlinks** from `~/.claude/<thing>` →
+        `statusline-command.sh`, `skills/`, **`hooks/`** into repo at
+        `claude/` via **selective symlinks** from `~/.claude/<thing>` →
         `~/dev/dotfiles/claude/<thing>`. Care: `~/.claude/` already
         contains per-machine state (projects/, todos/, shell-snapshots/)
         that must NOT be symlinked — only the config files Dan curates.
       - Decide what's shared (e.g., `CLAUDE.md`, `settings.json`,
-        `skills/`) vs per-host (`*.local.json` already gitignored).
+        `skills/`, `hooks/`) vs per-host (`*.local.json` already gitignored).
+      - **Hooks added 2026-05-26**: `~/.claude/hooks/bash-rm-rf-guard.sh`
+        (PreToolUse, wired via `settings.json` → `hooks.PreToolUse[Bash]`)
+        and the new §Filesystem Safety section in `~/.claude/CLAUDE.md`
+        — both prompted by the same-day `~/dev/adadapted/` incident
+        (see §Incidents). MUST be in Pass 6's selective-symlink set so
+        the air Mac gets the same enforcement. Pre-symlink test on
+        air: pass the hook script through `bash-rm-rf-guard.sh` self-
+        tests (the 16 test cases in the pro session transcript) before
+        wiring its `settings.json`.
       - VERIFICATION GATE: receiving Mac protocol + confirm Claude
         sessions start cleanly with new symlinks in place.
 - [~] **Pass 7 — README modernization & upkeep** (the "separate later
