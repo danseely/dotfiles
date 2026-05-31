@@ -47,7 +47,8 @@ speculatively. Confirmed by Dan, 2026-05-21.
 | iTerm plist handling | Curated export only (Pass 0 design below) | set |
 | Merge cadence | one merge `align/cleanup` → `master` at project end (master = clean rollback target throughout) | **confirmed 2026-05-22** |
 | `.gitconfig` identity | global `dan@danseely.net`; `includeIf "gitdir/i:~/dev/adadapted/"` (case-insensitive, post-review hardening) overrides to `dseely@adadapted.com` via repo-internal `gitconfig/adadapted` (referenced as `path = ~/dev/dotfiles/gitconfig/adadapted`). Byte-identical `.gitconfig` ships on both Macs; inert on machines without `~/dev/adadapted/`. | **decided 2026-05-22, implemented 2026-05-26 in Pass 2 (gitdir/i: hardening added post-review 2026-05-26)** |
-| Verification protocol | receiving Mac pulls into worktree first, runs danger check (deleted-files × symlink manifest), optionally tests selective symlinks, only then advances main checkout | **confirmed 2026-05-22** |
+| Verification protocol | receiving Mac pulls into worktree first, runs danger check (deleted-files × symlink manifest), runs selective-symlink test for any file with an auto-reload consumer (karabiner; iTerm if reattached), only then advances main checkout | **confirmed 2026-05-22; tightened 2026-05-31 (selective-symlink test now required, not optional, for auto-reload consumers)** |
+| Zero-downtime apply / atomic promotion | The apply step itself must not cross a partial / pre-edit-rolled-back state visible to processes spawned during the apply window. Both Macs are in-use during work hours with unrelated projects in flight — there is never a maintenance window. Mechanism: (a) pre-stage all target content in the verification worktree until fully verified; (b) promote per file via a single-operation overwrite (`git checkout <ref> -- <file>`, or atomic `mv -f` from tmp) — never a two-step `restore`-then-`pull` that crosses an intermediate state; (c) `git reset --hard <ref>` only AFTER the working tree is already at target content (it then becomes a HEAD-ref-only update with no further file writes); (d) for auto-reload consumers (karabiner; iTerm-on-reattach), use the selective-symlink test escape hatch first so the auto-reload moment lands on already-verified content. Existing-shell semantics: shell rc files (`.zshrc`, `.zprofile`, `.p10k.zsh`) only re-source on new shells, so in-flight shells are unaffected; the rule still applies because new shells can spawn at any moment from any unrelated project. | **confirmed 2026-05-31** |
 | Symlink manifest | per-Mac `manifests/symlinks-<host>.txt` committed to repo as LOSE-NO-DATA pre-flight inventory of symlinks-into-repo | **confirmed 2026-05-22** |
 | `.bash_profile`, `.zshrc-backup-24-jan-2022` | keep as-is, no content review | confirmed 2026-05-22 |
 | `~/.claude/` config in repo | yes — Pass 6 (deferred to end), selective symlinks pattern | confirmed 2026-05-22 |
@@ -171,6 +172,19 @@ Baton rule (avoid clobbering): the line below names who may edit
 
 ### BATON history
 
+- 2026-05-31 — macbook-air took BATON to **codify zero-downtime
+  apply guardrail**: new Decisions-log row "Zero-downtime apply /
+  atomic promotion" (no intermediate states visible to processes
+  spawned during apply; single-operation per-file overwrite from
+  pre-verified worktree; auto-reload consumers gated by selective-
+  symlink test). Also tightened the "Verification protocol" row:
+  selective-symlink test is now REQUIRED (was "optionally") for
+  any file with an auto-reload consumer. Motivated by Dan's stated
+  constraint: both Macs are in-use during work hours with unrelated
+  projects in flight — there is never a maintenance window, and the
+  apply step itself must not cross a partial state visible to newly
+  spawned processes. NOTES-only; no live changes; no `align/cleanup`
+  config content. Released BATON → idle in same commit.
 - 2026-05-27 — macbook-pro took BATON to register a new **Open
   question on `JetBrains Mono NL`**. Context: during a project-hold
   session Dan asked to tactically sync pro's dangling local Zed
