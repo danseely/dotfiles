@@ -172,6 +172,12 @@ Baton rule (avoid clobbering): the line below names who may edit
 
 ### BATON history
 
+- 2026-05-31 — macbook-air took BATON for a **tiny Pass 3
+  amendment**: add `alias buu='brew update && brew upgrade'` to
+  `zsh/.zshrc` in the alias cluster (between `gitprune` and the
+  youtube-dl comment). Canonical / shared across both Macs — not
+  a per-Mac override. Lands cleanly on the freshly-applied Pass 3
+  base. Released BATON → idle in same commit.
 - 2026-05-31 — macbook-air took BATON to **codify zero-downtime
   apply guardrail**: new Decisions-log row "Zero-downtime apply /
   atomic promotion" (no intermediate states visible to processes

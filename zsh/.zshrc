@@ -158,6 +158,9 @@ alias awsauth="~/aws-auth.sh default "
 alias gs="git status"
 alias gitprune='git branch --merged | egrep -v "(^\*|master|dev)" | xargs git branch -d'
 
+# brew
+alias buu='brew update && brew upgrade'
+
 # use newer fork of youtube-dl
 # alias youtube-dl="yt-dlp"
 
