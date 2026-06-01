@@ -23,6 +23,60 @@
 >    a worktree, including temporary degradation). See §Decisions log
 >    for full text + §Pass plan per-pass risk table.
 
+## Resume context (current handoff state — supersede on next session pause)
+
+**Last session ended:** 2026-05-31, macbook-air, paused after Pass 4
+landed.
+
+**Branch state:** `align/cleanup` at `45328ab feat(Pass 4): karabiner
+canonical — rule [1] disabled, compact form` (origin = local).
+BATON: `idle`.
+
+**Live verification status (air):**
+- Pass 1 ✓, Pass 2 ✓, Pass 3 ✓ (+ `buu` alias), Pass 4 ✓ (selective
+  live test passed: caps_lock, SuperDuper mode, right_option inert,
+  menu bar icon hidden).
+- Live ~/.config/karabiner symlink re-pointed back to main checkout
+  (was at `~/dev/dotfiles-align/karabiner` during the live test).
+- Worktree `~/dev/dotfiles-align` still in place — useful staging
+  for next pass; remove at project end.
+
+**Pending follow-up (NOT a blocker; next session should know):**
+- `karabiner/karabiner.json` is currently stored in jq's verbose
+  serialization (1309 lines / 33KB). Karabiner's native format is
+  compact (~857 lines / ~37KB). On Karabiner's next auto-write
+  (device hotplug, Karabiner-Elements GUI interaction, app
+  relaunch), it will re-normalize to its native style, showing as a
+  several-hundred-line whitespace-only M state in the working tree.
+  Plan: let Karabiner re-save naturally, then land a
+  `chore(Pass 4): renormalize karabiner.json to Karabiner-native
+  serialization` commit. Semantic content is correct as committed;
+  this is purely cosmetic. (If preferred, force re-save now by
+  toggling any setting in Karabiner-Elements GUI.)
+
+**Air-side work queue (in suggested order):**
+1. Catch the karabiner.json renormalization follow-up above (low
+   effort, opportunistic — wait for Karabiner to re-save).
+2. Pass 5 fzf bit: pick canonical location for fzf init loader
+   (`fzf/` subdir vs root `.fzf.zsh`). Still pending.
+3. Pass 6 (`~/.claude/` config in repo) — deferred to end per
+   Decisions log; pro added `hooks/` + Filesystem Safety scope
+   notes after the §Incidents `rm -rf` event.
+4. Triage §Open questions (JetBrains Mono NL pro-local override;
+   NVM lazy-loading research blurb).
+5. Final merge `align/cleanup` → `master`.
+
+**Pro-side adoption pending** (not air's job):
+- Pass 4 karabiner canonical (pro loses a few inert
+  identifier-only device entries; substantive remaps preserved).
+- Pass 5 zed adoption.
+
+**Snapshot reference:** `snapshot/macbook-air` (da6d5bc, 2026-05-22)
+preserves the pre-canonical M state of `.gitconfig`, `README.md`,
+`karabiner/karabiner.json`, `zsh/.zprofile`, `zsh/.zshrc`. Only
+remaining M edit in live air working tree: `README.md` (legacy WIP,
+not part of any active pass).
+
 ## Goal / end-state
 
 **#1 — identical configs on both Macs.** Maximize what is shared and
@@ -172,6 +226,13 @@ Baton rule (avoid clobbering): the line below names who may edit
 
 ### BATON history
 
+- 2026-05-31 — macbook-air took BATON to **write session
+  handoff**: new §Resume context section at top of NOTES with
+  current branch state, Pass 1-4 verification status, the
+  karabiner.json renormalization follow-up (jq's verbose
+  serialization → Karabiner's compact native form on next
+  auto-write), and the air-side work queue. NOTES-only; no live
+  changes. Released BATON → idle in same commit.
 - 2026-05-31 — macbook-air took BATON for **Pass 4 — Karabiner
   canonical**. Re-audited the `devices` block (2026-05-22 analysis
   underclassified it as auto-managed; it actually contains ~10
