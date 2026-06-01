@@ -172,6 +172,16 @@ Baton rule (avoid clobbering): the line below names who may edit
 
 ### BATON history
 
+- 2026-05-31 — macbook-air took BATON for **Pass 4 — Karabiner
+  canonical**. Re-audited the `devices` block (2026-05-22 analysis
+  underclassified it as auto-managed; it actually contains ~10
+  substantive per-keyboard remaps, byte-identical across both
+  Macs). Also caught that `global.show_in_menu_bar: false` is a
+  non-default Dan deliberately set. Decision: base canonical on
+  **live air** (not pro snapshot) — air is the superset for
+  `devices` and carries the `global` setting. Two targeted patches:
+  rule [1] `enabled: false`; drop `country_code: 0`. Selective
+  live test on air passed. Released BATON → idle in same commit.
 - 2026-05-31 — macbook-air took BATON for a **tiny Pass 3
   amendment**: add `alias buu='brew update && brew upgrade'` to
   `zsh/.zshrc` in the alias cluster (between `gitprune` and the
@@ -711,22 +721,23 @@ shell (worked example: 2026-05-26 attempt + rollback).
       - VERIFICATION GATE: receiving Mac protocol + open fresh shell
         on each Mac, confirm no startup errors, prompt renders
         correctly (p10k), `theme()` swaps profiles on pro.
-- [ ] **Pass 4 — Karabiner** (highest-risk: keyboard remapping)
-      - **Investigation first** (in Pass 1.5 or as Pass 4's opening
-        step): macbook-air's −500-line cut vs master is asymmetric
-        with macbook-pro's 36-line diff. Determine whether air's cut
-        was intentional pruning or a corruption/sync artifact, before
-        any canonical decision.
-      - **Section-by-section review** with Dan on what to keep —
-        karabiner.json has discrete `complex_modifications` blocks
-        that can be assessed individually.
-      - VERIFICATION GATE: receiving Mac runs selective live test in
-        worktree FIRST (`ln -sf <worktree>/karabiner/karabiner.json
-        ~/.config/karabiner/karabiner.json`, karabiner reloads
-        automatically on file change, test key remap behavior, revert
-        symlink if broken). Only then advance main. Karabiner's
-        `automatic_backups/` is an additional fallback alongside
-        `snapshot/<host>`.
+- [x] **Pass 4 — Karabiner** — air-side DONE 2026-05-31
+      (commit on `align/cleanup`; pro-side adoption pending).
+      - Canonical = **live air karabiner.json + 2 patches**: rule [1]
+        `right_option → Hyper` gets `"enabled": false` (Dan 2026-05-23);
+        drop `virtual_hid_keyboard.country_code: 0` (default value).
+        Everything else preserved verbatim — see §Pass 4 air-side
+        completion below for the full audit (and the correction to
+        the 2026-05-22 `devices` classification).
+      - Selective live test passed on air via dir-symlink re-point
+        `ln -sfn ~/dev/dotfiles-align/karabiner ~/.config/karabiner`
+        (correct form per Pass 1.5 finding — `~/.config/karabiner` is
+        a directory symlink, so the original "file-level re-point"
+        recipe in the older verification-gate note was wrong).
+      - ⚠️ NOT YET VERIFIED on macbook-pro. Pro will lose a few
+        inert identifier-only device entries (no remaps) on apply;
+        Karabiner auto-repopulates on next device connect.
+        Substantive remaps are byte-identical across Macs.
 - [~] **Pass 5 — Editor & tool config** (air-side DONE 2026-05-25;
       pro-side adoption pending; fzf still TBD)
       - `zed/keymap.json`, `zed/settings.json`: ✅ **air-side landed as
@@ -1519,6 +1530,63 @@ Canonical karabiner.json carries rule [1] "right_option → Hyper"
 with `"enabled": false` (pro's state).
 
 **Secrets scan — karabiner.json**: pure config, no secrets. ✓ clean.
+
+### Pass 4 air-side completion — DONE 2026-05-31
+
+**Re-audit of `devices` block** (correcting 2026-05-22 analysis):
+the original analysis classified `devices` as auto-managed cruft
+that could be ignored-for-canonical. **That was wrong** — air's
+`devices` array contains ~10 substantive per-keyboard remaps:
+- Catch-all (`is_keyboard:true` only) + multiple Apple keyboards
+  (vendor 1452, products 628/569/638/591/615; vendor 76, product
+  615): **backslash↔delete swap**.
+- Logitech `1118:1957` + `14145:1957`: backslash↔delete +
+  cmd↔opt + right_option→right_command (PC-keyboard layout fix).
+- `1452:591`, `1241:323`, `8352:16941`: include
+  left_control→play_or_pause.
+- External `8352:16941`: 7-key comprehensive remap (incl.
+  escape→grave/tilde, delete_forward→keyboard_fn).
+- `1452:34304`: `ignore: true` (deliberately ignored device).
+
+Pro snapshot has the SAME remaps for shared device IDs (Dan set
+them up identically across both Macs). The pro/air `devices` diff
+is essentially which devices each Mac has seen — auto-population
+identifier entries without remaps.
+
+**Also under-classified by the 2026-05-22 analysis**: top-level
+`global.show_in_menu_bar: false`. The original analysis labeled
+all of `global` as "harmless, defaults apply when missing" — but
+`false` here is a deliberate non-default (Karabiner default is
+`true`). Pro snapshot has no `global` block; adopting pro-as-base
+would silently make the menu bar icon reappear on air. Decision
+(Dan 2026-05-31): carry into canonical.
+
+**Canonical strategy**: base on **live air** karabiner.json (not
+pro snapshot) because air is the superset for `devices` and also
+carries `global.show_in_menu_bar: false`. Two targeted patches vs
+live air, nothing else:
+1. Rule [1] add `"enabled": false`.
+2. Drop `virtual_hid_keyboard.country_code: 0`.
+
+Preserved verbatim from live air: 19 rule bodies, `global` block,
+`fn_function_keys` (12 entries), `simple_modifications` (3
+entries: caps_lock + f5 + f6), all 20 device entries.
+
+**Selective live test (2026-05-31)**: re-pointed dir symlink
+`~/.config/karabiner` → `~/dev/dotfiles-align/karabiner`. Dan
+verified caps_lock single/hold, SuperDuper mode, right_option
+correctly inert (rule disabled), menu bar icon hidden. ✓
+
+**Pro-side adoption note**: on apply, pro will lose a few inert
+identifier-only device entries (auto-population stubs without
+remaps) that air doesn't have; Karabiner auto-repopulates on next
+device connect. All substantive remaps are byte-identical across
+Macs and preserved.
+
+**Snapshot reference**: `snapshot/macbook-air` preserves the
+pre-canonical M state verbatim if ever needed (1-line drift
+between snapshot and live as of 2026-05-31, driven by
+Karabiner's `devices` auto-rewriting since 2026-05-22).
 
 ### Diff dive — Pass 5 scope (2026-05-23)
 
